@@ -164,3 +164,10 @@ fabric.properties
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.idea
+CMakeLists.txt
+main.mm
+resource.h
+resources/default.metallib
+resources/image.exr
+shaders/
