@@ -11,7 +11,7 @@ set(RESOURCE_DIR ${CMAKE_SOURCE_DIR}/resources)
 add_definitions(-DRESOURCE_DIR="${RESOURCE_DIR}")
 
 link_libraries("-framework Foundation" "-framework Metal" "-framework MetalPerformanceShaders")
-add_executable(Metalight main.mm resource.h)
+add_executable(Metalight main.mm resource.h common.h)
 
 add_subdirectory(shaders)
 add_dependencies(Metalight shaders)
