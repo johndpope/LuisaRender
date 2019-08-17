@@ -116,7 +116,7 @@ kernel void accumulate(texture2d<float, access::read> frame [[texture(0)]],
                        texture2d<float, access::read_write> accum [[texture(1)]],
                        constant uint32_t &frame_count [[buffer(0)]],
                        uint2 coords [[thread_position_in_grid]]) {
-    auto color = frame.read(coords);
-    auto total = accum.read(coords);
-    accum.write((total * (frame_count - 1) + color) / frame_count, coords);
+    auto color = frame.read(coords).xyz;
+    auto total = accum.read(coords).xyz;
+    accum.write(float4((total * (frame_count - 1) + color) / frame_count, 1.0f), coords);
 }

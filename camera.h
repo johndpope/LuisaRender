@@ -36,11 +36,15 @@ struct Camera {
           _left{simd::normalize(simd::cross(up, front))},
           _up{simd::normalize(simd::cross(front, simd::cross(up, front)))},
           _near_plane{near_plane},
-          _frame_width{2.0f * tan(radians(0.5f * fov_h)) * _near_plane},
+          _frame_width{2.0f * tan(radians(0.5f * fov_h)) * near_plane},
           _lens_radius{lens_radius},
           _focal_distance{focal_distance} {}
     
     void focus_at(float distance) {
         _focal_distance = distance;
+    }
+    
+    void set_horizontal_fov(float fov_deg) {
+        _frame_width = 2.0f * tan(radians(0.5f * fov_deg)) * _near_plane;
     }
 };

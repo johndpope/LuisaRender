@@ -37,3 +37,4 @@ add_subdirectory(shaders)
 add_dependencies(Metalight shaders)
 
 add_executable(TestImGui gui.mm)
+add_dependencies(TestImGui shaders)
