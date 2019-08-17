@@ -168,6 +168,3 @@ fabric.properties
 CMakeLists.txt
 main.mm
 resource.h
-resources/default.metallib
-resources/image.exr
-shaders/
