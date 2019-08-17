@@ -165,6 +165,3 @@ fabric.properties
 !.vscode/launch.json
 !.vscode/extensions.json
 .idea
-CMakeLists.txt
-main.mm
-resource.h
