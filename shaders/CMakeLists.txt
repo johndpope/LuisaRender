@@ -17,5 +17,5 @@ foreach (SOURCE_FILE ${SHADER_SOURCE_FILES})
 endforeach ()
 
 add_custom_command(TARGET shaders
-                   COMMAND xcrun -sdk macosx metallib ${CMAKE_CURRENT_BINARY_DIR}/*.air -o ${RESOURCE_DIR}/default.metallib
+                   COMMAND xcrun -sdk macosx metallib ${CMAKE_CURRENT_BINARY_DIR}/*.air -o ${RESOURCE_DIR}/shaders.metallib
                    COMMENT "Generating Metal Library: ${RESOURCE_DIR}/shaders.metallib")
