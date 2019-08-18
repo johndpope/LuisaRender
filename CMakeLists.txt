@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(BUILD_SHARED_LIBS OFF)
 
 include_directories(thirdparty/glfw/include)
-include_directories(thirdparty/imgui/imgui)
+include_directories(thirdparty/imgui/imgui thirdparty/imgui/imgui/examples)
 include_directories(gui)
 
 set(GLFW_BUILD_EXAMPLES OFF)

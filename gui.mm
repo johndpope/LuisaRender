@@ -1,8 +1,3 @@
-// ImGui - standalone example application for GLFW + Metal, using programmable pipeline
-// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
-
-#import <opencv2/opencv.hpp>
-
 #include <imgui.h>
 #include <imgui_impl_metal.h>
 #include <imgui_impl_glfw.h>
@@ -19,6 +14,8 @@
 
 #import <simd/simd.h>
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
+#import <array>
+#import <iostream>
 
 #import "resource.h"
 #import "ray.h"
@@ -45,6 +42,9 @@ private:
     id<MTLTexture> _random_seeds{nullptr};
     id<MTLTexture> _output_frame{nullptr};
     MTLSize _output_frame_size{};
+    
+    std::thread _random_generation_thread;
+    std::atomic<bool> _ready{false};
     
     template<typename Setup, std::enable_if_t<std::is_invocable_v<Setup, id<MTLComputeCommandEncoder>>, int> = 0>
     void _dispatch_compute_program(id<MTLComputePipelineState> program, id<MTLCommandBuffer> command_buffer, Setup &&setup) const {
@@ -81,33 +81,6 @@ public:
         [accumulation_function autorelease];
         _accumulation_program = [_device newComputePipelineStateWithFunction:accumulation_function error:nullptr];
         
-        auto texture_desc = [[[MTLTextureDescriptor alloc] init] autorelease];
-        texture_desc.pixelFormat = MTLPixelFormatRGBA32Float;
-        texture_desc.width = width;
-        texture_desc.height = height;
-        texture_desc.usage = MTLTextureUsageShaderWrite;
-        texture_desc.storageMode = MTLStorageModePrivate;
-        _output_frame = [_device newTextureWithDescriptor:texture_desc];
-        
-        texture_desc.usage |= MTLTextureUsageShaderRead;
-        _accumulated_frame = [_device newTextureWithDescriptor:texture_desc];
-        
-        texture_desc.pixelFormat = MTLPixelFormatR32Uint;
-        texture_desc.usage = MTLTextureUsageShaderRead;
-        texture_desc.storageMode = MTLStorageModeManaged;
-        _random_seeds = [_device newTextureWithDescriptor:texture_desc];
-        
-        std::mt19937 random_engine{std::random_device{}()};
-        std::uniform_int_distribution<uint32_t> distribution{0, static_cast<unsigned int>(width * height - 1)};
-        std::vector<uint32_t> seeds(width * height);
-        for (auto i = 0ul; i < width * height; i++) {
-            seeds[i] = distribution(random_engine);
-        }
-        [_random_seeds replaceRegion:MTLRegionMake2D(0, 0, width, height)
-                         mipmapLevel:0
-                           withBytes:seeds.data()
-                         bytesPerRow:sizeof(uint32_t) * width];
-        
         _acceleration = [[MPSTriangleAccelerationStructure alloc] initWithDevice:_device];
         _ray_intersector = [[MPSRayIntersector alloc] initWithDevice:_device];
         
@@ -137,17 +110,58 @@ public:
         _ray_intersector.intersectionStride = sizeof(Intersection);
         _ray_intersector.intersectionDataType = MPSIntersectionDataTypeDistancePrimitiveIndexCoordinates;
         
-        auto ray_count = _output_frame_size.width * _output_frame_size.height;
-        _ray_buffer = [_device newBufferWithLength:ray_count * sizeof(Ray) options:MTLResourceStorageModePrivate];
-        _intersection_buffer = [_device newBufferWithLength:ray_count * sizeof(Intersection) options:MTLResourceStorageModePrivate];
+        resize(width, height);
         
     }
     
-    void resize(uint32_t width, uint32_t height) {
-    
+    void resize(size_t width, size_t height) {
+        _output_frame_size.width = width;
+        _output_frame_size.height = height;
+        
+        auto texture_desc = [[[MTLTextureDescriptor alloc] init] autorelease];
+        texture_desc.pixelFormat = MTLPixelFormatRGBA32Float;
+        texture_desc.width = width;
+        texture_desc.height = height;
+        texture_desc.usage = MTLTextureUsageShaderWrite;
+        texture_desc.storageMode = MTLStorageModePrivate;
+        _output_frame = [_device newTextureWithDescriptor:texture_desc];
+        
+        texture_desc.usage |= MTLTextureUsageShaderRead;
+        _accumulated_frame = [_device newTextureWithDescriptor:texture_desc];
+        
+        texture_desc.pixelFormat = MTLPixelFormatR32Uint;
+        texture_desc.usage = MTLTextureUsageShaderRead;
+        texture_desc.storageMode = MTLStorageModeManaged;
+        
+        if (_random_generation_thread.joinable()) {
+            _random_generation_thread.join();
+        }
+        _random_seeds = [_device newTextureWithDescriptor:texture_desc];
+        _ready = false;
+        _random_generation_thread = std::thread{[this, width, height] {
+            std::mt19937 random_engine{std::random_device{}()};
+            std::uniform_int_distribution<uint32_t> distribution{0, static_cast<unsigned int>(width * height - 1)};
+            std::vector<uint32_t> seeds(width * height);
+            for (auto i = 0ul; i < width * height; i++) {
+                seeds[i] = distribution(random_engine);
+            }
+            [_random_seeds replaceRegion:MTLRegionMake2D(0, 0, width, height)
+                             mipmapLevel:0
+                               withBytes:seeds.data()
+                             bytesPerRow:sizeof(uint32_t) * width];
+            _ready = true;
+        }};
+        
+        auto ray_count = width * height;
+        _ray_buffer = [_device newBufferWithLength:ray_count * sizeof(Ray) options:MTLResourceStorageModePrivate];
+        _intersection_buffer = [_device newBufferWithLength:ray_count * sizeof(Intersection) options:MTLResourceStorageModePrivate];
     }
     
     void render(id<MTLCommandBuffer> command_buffer, const Camera &camera, uint32_t &frame_count, uint32_t spp) {
+        
+        if (!_ready) {
+            return;
+        }
         
         for (auto i = 1u; i <= spp; i++) {
             
@@ -222,7 +236,7 @@ int main(int, char **) {
     }
     
     NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
-    auto device = devices[0];
+    id<MTLDevice> device = devices[0];
     for (id<MTLDevice> d in devices) {
         if (!d.isLowPower) {
             device = d;
@@ -249,6 +263,10 @@ int main(int, char **) {
     nswin.contentView.layer = layer;
     nswin.contentView.wantsLayer = YES;
     
+    static std::condition_variable cv;
+    static std::mutex mutex;
+    static auto command_count = 0u;
+    
     auto renderPassDescriptor = [[MTLRenderPassDescriptor new] autorelease];
     
     // Our state
@@ -268,22 +286,29 @@ int main(int, char **) {
         
         id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
         
-        renderer.render(commandBuffer, camera, frame_count, 4u);
-        auto blit_encoder = [commandBuffer blitCommandEncoder];
-        [blit_encoder copyFromTexture:renderer.accumulated_frame()
-                          sourceSlice:0
-                          sourceLevel:0
-                         sourceOrigin:MTLOriginMake(0, 0, 0)
-                           sourceSize:MTLSizeMake(frame_width, frame_height, 1)
-                            toTexture:drawable.texture
-                     destinationSlice:0
-                     destinationLevel:0
-                    destinationOrigin:MTLOriginMake(0, 0, 0)];
-        [blit_encoder endEncoding];
+        if (width != frame_width || height != frame_height) {
+            frame_width = static_cast<uint32_t>(width);
+            frame_height = static_cast<uint32_t>(height);
+            renderer.resize(frame_width, frame_height);
+            frame_count = 0;
+        } else {
+            renderer.render(commandBuffer, camera, frame_count, 4u);
+            auto blit_encoder = [commandBuffer blitCommandEncoder];
+            [blit_encoder copyFromTexture:renderer.accumulated_frame()
+                              sourceSlice:0
+                              sourceLevel:0
+                             sourceOrigin:MTLOriginMake(0, 0, 0)
+                               sourceSize:MTLSizeMake(frame_width, frame_height, 1)
+                                toTexture:drawable.texture
+                         destinationSlice:0
+                         destinationLevel:0
+                        destinationOrigin:MTLOriginMake(0, 0, 0)];
+            [blit_encoder endEncoding];
+        }
         
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
         renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
-        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
+        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
         renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
         
@@ -298,7 +323,7 @@ int main(int, char **) {
         if (ImGui::SliderFloat("Focal Distance", &camera._focal_distance, 0.1f, 10.0f)) { frame_count = 0; }
         if (ImGui::SliderFloat("Aperture Radius", &camera._lens_radius, 0.0f, 0.2f)) { frame_count = 0; }
         static auto fov = 45.0f;
-        if (ImGui::SliderFloat("fov", &fov, 5.0f, 85.0f)) {
+        if (ImGui::SliderFloat("Field of View", &fov, 5.0f, 85.0f)) {
             camera.set_horizontal_fov(fov);
             frame_count = 0;
         }
@@ -311,17 +336,36 @@ int main(int, char **) {
         
         [renderEncoder endEncoding];
         
+        {
+            std::lock_guard<std::mutex> lock{mutex};
+            command_count++;
+            std::cout << "A: " << command_count << std::endl;
+        }
+        
+        [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+            std::unique_lock<std::mutex> lock{mutex};
+            command_count--;
+            std::cout << "B: " << command_count << std::endl;
+            lock.unlock();
+            cv.notify_one();
+        }];
+        
         [commandBuffer presentDrawable:drawable];
         [commandBuffer commit];
+    }
+    
+    {
+        std::unique_lock<std::mutex> lock{mutex};
+        cv.wait(lock, [] {
+            std::cout << "C: " << command_count << std::endl;
+            return command_count == 0;
+        });
     }
     
     // Cleanup
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-    
-    glfwDestroyWindow(window);
-    glfwTerminate();
     
     return 0;
 }
