@@ -24,9 +24,9 @@ struct texture2d {};
 
 #endif
 
-#include "../ray.h"
-#include "../intersection.h"
-#include "../camera.h"
+#include "../util/ray.h"
+#include "../util/intersection.h"
+#include "../util/camera.h"
 
 using namespace metal;
 
