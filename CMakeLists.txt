@@ -38,3 +38,5 @@ add_dependencies(Metalight shaders)
 
 add_executable(TestImGui gui.mm)
 add_dependencies(TestImGui shaders)
+
+add_executable(ImGui-Metal thirdparty/imgui/imgui/examples/example_glfw_metal/main.mm)

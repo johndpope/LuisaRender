@@ -114,6 +114,12 @@ public:
         
     }
     
+    ~RendererImpl() noexcept {
+        if (_random_generation_thread.joinable()) {
+            _random_generation_thread.join();
+        }
+    }
+    
     void resize(size_t width, size_t height) {
         _output_frame_size.width = width;
         _output_frame_size.height = height;
@@ -311,6 +317,7 @@ int main(int, char **) {
         renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
         renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+        [renderEncoder pushDebugGroup:@"ImGui demo"];
         
         // Start the Dear ImGui frame
         ImGui_ImplMetal_NewFrame(renderPassDescriptor);
@@ -333,7 +340,8 @@ int main(int, char **) {
         // Rendering
         ImGui::Render();
         ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, renderEncoder);
-        
+    
+        [renderEncoder popDebugGroup];
         [renderEncoder endEncoding];
         
         {
@@ -366,6 +374,9 @@ int main(int, char **) {
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    
+    glfwDestroyWindow(window);
+    glfwTerminate();
     
     return 0;
 }
