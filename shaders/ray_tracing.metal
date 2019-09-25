@@ -113,10 +113,11 @@ kernel void handle_intersection(texture2d<float, access::write> image [[texture(
 }
 
 kernel void accumulate(texture2d<float, access::read> frame [[texture(0)]],
-                       texture2d<float, access::read_write> accum [[texture(1)]],
+                       texture2d<float, access::read_write> accum_prev [[texture(1)]],
                        constant uint32_t &frame_count [[buffer(0)]],
                        uint2 coords [[thread_position_in_grid]]) {
-    auto color = frame.read(coords).xyz;
-    auto total = accum.read(coords).xyz;
-    accum.write(float4((total * (frame_count - 1) + color) / frame_count, 1.0f), coords);
+    auto color = frame.read(coords).rgb;
+    auto total = accum_prev.read(coords).rgb;
+    accum_prev.write(float4((total * (frame_count - 1) + color) / frame_count, 1.0f), coords);
+//    accum.write(float4(color, 1.0f), coords);
 }

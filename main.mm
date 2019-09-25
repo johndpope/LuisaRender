@@ -39,6 +39,7 @@ private:
     MPSRayIntersector *_ray_intersector{nullptr};
     
     id<MTLTexture> _accumulated_frame{nullptr};
+    id<MTLTexture> _swap_frame{nullptr};
     id<MTLTexture> _random_seeds{nullptr};
     id<MTLTexture> _output_frame{nullptr};
     MTLSize _output_frame_size{};
@@ -53,7 +54,7 @@ private:
         auto w = program.threadExecutionWidth;
         auto h = program.maxTotalThreadsPerThreadgroup / w;
         [encoder setComputePipelineState:program];
-        [encoder dispatchThreads:_output_frame_size threadsPerThreadgroup:{w, h, 1}];
+        [encoder dispatchThreads:_output_frame_size threadsPerThreadgroup:{8, 8, 1}];
         [encoder endEncoding];
     }
 
@@ -132,7 +133,7 @@ public:
         texture_desc.storageMode = MTLStorageModePrivate;
         _output_frame = [_device newTextureWithDescriptor:texture_desc];
         
-        texture_desc.usage |= MTLTextureUsageShaderRead;
+        texture_desc.usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
         _accumulated_frame = [_device newTextureWithDescriptor:texture_desc];
         
         texture_desc.pixelFormat = MTLPixelFormatR32Uint;
@@ -197,8 +198,13 @@ public:
             _dispatch_compute_program(_accumulation_program, command_buffer, [this, t = frame_count + i](id<MTLComputeCommandEncoder> encoder) {
                 [encoder setTexture:_output_frame atIndex:0];
                 [encoder setTexture:_accumulated_frame atIndex:1];
+//                [encoder setTexture:_swap_frame atIndex:2];
                 [encoder setBytes:&t length:sizeof(uint32_t) atIndex:0];
             });
+            
+//            auto f = _accumulated_frame;
+//            _accumulated_frame = _swap_frame;
+//            _swap_frame = f;
         }
         frame_count += spp;
     }
@@ -238,13 +244,15 @@ int main(int, char **) {
     }
     
     NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
-    id<MTLDevice> device = devices[0];
+    auto device = devices[0];
     for (id<MTLDevice> d in devices) {
         if (!d.isLowPower) {
             device = d;
             break;
         }
     }
+    
+    NSLog(@"%@", device);
     
     auto frame_width = 0u, frame_height = 0u;
     glfwGetFramebufferSize(window, reinterpret_cast<int *>(&frame_width), reinterpret_cast<int *>(&frame_height));
@@ -261,7 +269,8 @@ int main(int, char **) {
     NSWindow *nswin = glfwGetCocoaWindow(window);
     CAMetalLayer *layer = [CAMetalLayer layer];
     layer.device = device;
-    layer.pixelFormat = MTLPixelFormatRGB10A2Unorm;
+    layer.colorspace = CGColorSpaceCreateWithName(kCGColorSpaceLinearSRGB);
+    layer.pixelFormat = MTLPixelFormatBGR10A2Unorm;
     nswin.contentView.layer = layer;
     nswin.contentView.wantsLayer = YES;
     
