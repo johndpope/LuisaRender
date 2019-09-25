@@ -1,4 +1,7 @@
 #include <metal_stdlib>
+
+#include "../core/geometry.h"
+
 using namespace metal;
 
 kernel void background(texture2d<float, access::write> image [[texture(0)]],
