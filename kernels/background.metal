@@ -1,6 +1,5 @@
 #include <metal_stdlib>
-
-#include "../core/geometry.h"
+#include <simd/simd.h>
 
 using namespace metal;
 

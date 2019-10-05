@@ -12,10 +12,10 @@ endforeach ()
 foreach (SOURCE_FILE ${KERNEL_SOURCE_FILES})
     add_custom_command(TARGET kernels
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE}
-                       COMMAND xcrun -sdk macosx metal -c ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE} -o ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_FILE}.air
+                       COMMAND xcrun -sdk macosx metal -std=macos-metal2.2 -c ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE} -o ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_FILE}.air
                        COMMENT "Generating Metal IR file: ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_FILE}.air")
 endforeach ()
 
 add_custom_command(TARGET kernels
-                   COMMAND xcrun -sdk macosx metallib ${CMAKE_CURRENT_BINARY_DIR}/*.air -o ${CMAKE_BINARY_DIR}/bin/shaders.metallib
-                   COMMENT "Generating Metal Library: ${CMAKE_BINARY_DIR}/bin/shaders.metallib")
+                   COMMAND xcrun -sdk macosx metallib ${CMAKE_CURRENT_BINARY_DIR}/*.air -o ${CMAKE_BINARY_DIR}/bin/kernels.metallib
+                   COMMENT "Generating Metal Library: ${CMAKE_BINARY_DIR}/bin/kernels.metallib")

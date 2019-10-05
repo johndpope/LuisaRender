@@ -1,0 +1,88 @@
+Transform camera_control : StaticCameraControl {
+  eye { 400.0, 20.0, 30.0 }
+  look_at { 0, 63, -110 }
+  up { 0, 0, 1 }
+}
+
+Film film : RGB {
+  size { 1024, 768 }
+  filter : MitchellNetravali {}  // using default settings
+}
+
+Camera camera : Perspective {
+  fov { 39.0 }
+  lens_radius { 10.0 }
+  focal_distance { 130.0 }
+  film { @film }
+  transform { @camera_control }
+}
+
+Integrator integrator : Path {
+  sampler : Halton {}
+  spp { 16 }
+}
+
+Light light : Area {
+  position { 150, 120, 20 }
+  radiance { 2000, 2000, 2000 }
+  shape : Sphere {
+    radius { 3 }
+  }
+  material : Matte {
+    albedo { 0, 0, 0 }
+  }
+}
+
+Material material : Matte {
+  albedo { 0.5, 0.5, 0.8 }
+}
+
+Transform transform : Static {
+  translate { 0, 0, -140 }
+}
+
+Shape mesh_1 : TriangleMesh {
+  positions { -1000, -1000, 0, 1000, -1000, 0, 1000, 1000, 0, -1000, 1000, 0 }
+  indices { 0, 1, 2, 2, 3, 0, }
+  material { @material }
+  transform { @transform }
+}
+
+Shape mesh_2 : TriangleMesh {
+  positions { -400, -1000, -1000, -400, 1000, -1000, -400, 1000, 1000, -400, -1000, 1000 }
+  indices { 0, 1, 2, 2, 3, 0 }
+  material { @material }
+  transform { @transform }
+}
+
+Shape mesh_3 : TriangleMesh {
+  file { "killeroo.obj" }
+  transform : Static {
+    scale { 0.5, 0.5, 0.5 }
+    rotate { 0, 0, 1, -60 }
+    translate { 100, 200, -140 }
+  }
+  material : Plastic {
+    albedo { 0.4, 0.2, 0.2 }
+    specular { 0.5, 0.5, 0.5 }
+    roughness { 0.25 }
+  }
+}
+
+Shape group : Group {
+  shapes { @mesh_1, @mesh_2, @mesh_3 }
+}
+
+Task render : SingleShot {
+  camera { @camera }
+  integrator { @integrator }
+  geometry { @group }
+  saver : EXR {
+    directory { "result" }
+  }
+}
+
+// define render tasks here
+tasks {
+  @render
+}
