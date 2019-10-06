@@ -61,7 +61,7 @@ struct CoreTypeInfo {
     static constexpr auto is_value = is_value_type;
 };
 
-using AllCoreTypeInfo = std::tuple<
+using CoreTypeInfoList = std::tuple<
     CoreTypeInfo<std::string, CoreTypeTag::STRING, true>,
     CoreTypeInfo<bool, CoreTypeTag::BOOL, true>,
     CoreTypeInfo<float, CoreTypeTag::FLOAT, true>,
@@ -118,13 +118,13 @@ struct InfoOfCoreTypeTagImpl<std::tuple<CoreTypeInfo<FirstType, first_tag, first
 
 }
 
-constexpr auto core_type_count = _impl::CoreTypeCountImpl<AllCoreTypeInfo>::value;
+constexpr auto core_type_count = _impl::CoreTypeCountImpl<CoreTypeInfoList>::value;
 
 template<CoreTypeTag tag>
-constexpr auto index_of_core_type_tag = _impl::IndexOfCoreTypeTagImpl<AllCoreTypeInfo, tag>::value;
+constexpr auto index_of_core_type_tag = _impl::IndexOfCoreTypeTagImpl<CoreTypeInfoList, tag>::value;
 
 template<CoreTypeTag tag>
-using InfoOfCoreTypeTag = typename _impl::InfoOfCoreTypeTagImpl<AllCoreTypeInfo, tag>::Type;
+using InfoOfCoreTypeTag = typename _impl::InfoOfCoreTypeTagImpl<CoreTypeInfoList, tag>::Type;
 
 namespace _impl {
 
@@ -161,7 +161,7 @@ struct TagOfCoreTypeImpl<std::tuple<CoreTypeInfo<FirstType, first_tag, first_is_
 }
 
 template<typename type>
-constexpr auto tag_of_core_type = _impl::TagOfCoreTypeImpl<AllCoreTypeInfo, type>::value;
+constexpr auto tag_of_core_type = _impl::TagOfCoreTypeImpl<CoreTypeInfoList, type>::value;
 
 template<typename type>
 constexpr auto name_of_core_type = name_of_core_type_tag(tag_of_core_type<type>);
@@ -187,6 +187,121 @@ struct BaseTagOfDerivedType<std::tuple<CoreTypeInfo<FirstType, first_tag, first_
 }
 
 template<typename T>
-constexpr auto base_tag_of_derived_type = _impl::BaseTagOfDerivedType<AllCoreTypeInfo, T>::value;
+constexpr auto base_tag_of_derived_type = _impl::BaseTagOfDerivedType<CoreTypeInfoList, T>::value;
+
+namespace _impl {
+
+template<typename Tuple, typename Result, template<CoreTypeTag> class MapTag>
+struct MapCoreTypeInfoListByTagImpl {
+    using Type = Result;
+};
+
+template<typename FirstType, CoreTypeTag first_tag, bool first_is_value_type, typename ...OtherInfo, typename ...Ctors, template<CoreTypeTag> class Map>
+struct MapCoreTypeInfoListByTagImpl<std::tuple<CoreTypeInfo<FirstType, first_tag, first_is_value_type>, OtherInfo...>, std::tuple<Ctors...>, Map> {
+    using Type = typename MapCoreTypeInfoListByTagImpl<std::tuple<OtherInfo...>, std::tuple<Ctors..., Map<first_tag>>, Map>::Type;
+};
+
+}
+
+template<template<CoreTypeTag> class MapTag>
+using MapCoreTypeInfoListByTag = typename _impl::MapCoreTypeInfoListByTagImpl<CoreTypeInfoList, std::tuple<>, MapTag>::Type;
+
+template<CoreTypeTag t>
+struct WrapCoreTypeTag {
+    static constexpr auto tag = t;
+};
+
+namespace _impl {
+
+template<CoreTypeTag tag>
+using MapCoreTypeTagToWrapperImpl = WrapCoreTypeTag<tag>;
+
+}
+
+using CoreTypeTagList = MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToWrapperImpl>;
+using CoreTypeList = MapCoreTypeInfoListByTag<TypeOfCoreTypeTag>;
+
+namespace _impl {
+
+template<typename Tuple>
+struct TagOfCoreTypeNameImpl {
+    constexpr static auto get(std::string_view) noexcept {
+        return CoreTypeTag::UNKNOWN;
+    }
+};
+
+template<CoreTypeTag first, CoreTypeTag ...others>
+struct TagOfCoreTypeNameImpl<std::tuple<WrapCoreTypeTag<first>, WrapCoreTypeTag<others>...>> {
+    constexpr static auto get(std::string_view name) noexcept {
+        return name == name_of_core_type_tag(first) ? first : TagOfCoreTypeNameImpl<std::tuple<WrapCoreTypeTag<others>...>>::get(name);
+    }
+};
+
+}
+
+constexpr CoreTypeTag tag_of_core_type_name(std::string_view name) noexcept {
+    return _impl::TagOfCoreTypeNameImpl<CoreTypeTagList>::get(name);
+}
+
+namespace _impl {
+
+template<typename Tuple>
+struct IndexOfCoreTypeNameImpl {
+    constexpr static auto get(std::string_view) noexcept {
+        return -1;
+    }
+};
+
+template<CoreTypeTag first, CoreTypeTag ...others>
+struct IndexOfCoreTypeNameImpl<std::tuple<WrapCoreTypeTag<first>, WrapCoreTypeTag<others>...>> {
+    constexpr static auto get(std::string_view name) noexcept {
+        return name == name_of_core_type_tag(first) ?
+               index_of_core_type_tag<first> :
+               IndexOfCoreTypeNameImpl<std::tuple<WrapCoreTypeTag<others>...>>::get(name);
+    }
+};
+
+}
+
+constexpr int index_of_core_type_name(std::string_view name) noexcept {
+    return _impl::IndexOfCoreTypeNameImpl<CoreTypeTagList>::get(name);
+}
+
+namespace _impl {
+
+template<typename ...T>
+constexpr auto is_core_type_name_impl(std::string_view name, std::tuple<T...> list) noexcept {
+    return ((name == name_of_core_type_tag(T::tag)) || ...);
+}
+
+}
+
+constexpr auto is_core_type_name(std::string_view name) noexcept {
+    return _impl::is_core_type_name_impl(name, CoreTypeTagList{});
+}
+
+template<CoreTypeTag tag>
+constexpr auto is_core_type_tag_value_type = InfoOfCoreTypeTag<tag>::is_value_type;
+
+namespace _impl {
+
+template<typename Tuple>
+struct VariantFromTupleImpl {};
+
+template<typename ...T>
+struct VariantFromTupleImpl<std::tuple<T...>> {
+    using Type = std::variant<T...>;
+};
+
+template<CoreTypeTag tag>
+using MapCoreTypeTagToVectorImpl = std::vector<TypeOfCoreTypeTag<tag>>;
+
+}
+
+template<typename Tuple>
+using VariantFromTuple = typename _impl::VariantFromTupleImpl<Tuple>::Type;
+
+using CoreTypeVariant = VariantFromTuple<CoreTypeList>;
+using CoreTypeVectorVariant = VariantFromTuple<MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToVectorImpl>>;
 
 }

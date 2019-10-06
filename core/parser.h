@@ -5,17 +5,27 @@
 #pragma once
 
 #include <vector>
+#include <variant>
 #include "type_reflection.h"
 
 namespace luisa {
 
-struct ParserState {
+namespace _impl {
 
-};
+}
+
+
+using CreatedCoreTypeVector =
 
 class Parser {
 
 private:
+    size_t _curr_row;
+    size_t _curr_col;
+    std::string _source;
+    std::unordered_map<std::string_view, CoreTypeVariant> _created;
+
+public:
 
 
 };

@@ -8,7 +8,7 @@ namespace luisa {
 
 namespace _impl {
 
-void TypeReflectionHelperImpl::register_class(std::string_view cls, std::string_view parent) noexcept {
+void TypeReflectionRegistrationHelperImpl::register_class(std::string_view cls, std::string_view parent) noexcept {
     
     auto &m = TypeReflectionManager::instance();
     m._classes.emplace_back(cls);
@@ -22,7 +22,7 @@ void TypeReflectionHelperImpl::register_class(std::string_view cls, std::string_
     }
 }
 
-void TypeReflectionHelperImpl::register_property(std::string_view prop, CoreTypeTag tag) noexcept {
+void TypeReflectionRegistrationHelperImpl::register_property(std::string_view prop, CoreTypeTag tag) noexcept {
     auto &m = TypeReflectionManager::instance();
     assert(m._curr->find(prop) == m._curr->end());  // ensure that the property is not duplicate
     (*m._curr)[prop] = tag;
@@ -58,6 +58,14 @@ CoreTypeTag TypeReflectionManager::property_tag(std::string_view cls, std::strin
 bool TypeReflectionManager::is_core(std::string_view cls) const noexcept {
     assert(_parents.find(cls) != _parents.end());
     return _parents.at(cls).empty();
+}
+
+CoreTypeVariant TypeReflectionManager::create(CoreTypeVectorVariant &param, CoreTypeTag tag, std::string_view detail_name) {
+    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(param, tag, detail_name);
+}
+
+CoreTypeVariant TypeReflectionManager::create(CoreTypeVectorVariant &param, std::string_view base_type, std::string_view detail_name) {
+    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(param, tag_of_core_type_name(base_type), detail_name);
 }
 
 }

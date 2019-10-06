@@ -12,10 +12,10 @@ namespace luisa {
 core_class(Saver) {
 
 protected:
-    property(std::filesystem::path, directory);
+    property(std::filesystem::path, directory, CoreTypeTag::STRING);
 
 public:
-    virtual write(const std::shared_ptr<Film> &film, size_t id) = 0;
-}
+    virtual void write(const std::shared_ptr<Film> &film, size_t id) = 0;
+};
 
 }

@@ -5,13 +5,10 @@ int main() {
     
     using namespace luisa;
     
-    std::cout << is_core_type < Camera > << std::endl;
+    std::cout << is_core_type<Camera> << std::endl;
     
     std::cout << name_of_core_type_tag(Camera::base_tag) << std::endl;
-    
-    int a = 5;
-    auto x = TypeReflectionManager::instance().create<CoreTypeTag::CAMERA>("ThinLens", a);
-    auto y = TypeReflectionManager::instance().create<CoreTypeTag::CAMERA>("Perspective", a);
+    std::cout << name_of_core_type_tag(tag_of_core_type_name("Camera")) << std::endl;
     
     for (auto name : TypeReflectionManager::instance().classes()) {
         std::cout << "class " << name;
