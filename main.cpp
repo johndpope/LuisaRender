@@ -1,9 +1,15 @@
 #include <iostream>
 #include <core/camera.h>
+#include <core/material.h>
+#include <core/light.h>
+#include <core/integrator.h>
+#include <core/string_manipulation.h>
 
 int main() {
     
     using namespace luisa;
+    
+    std::cout << serialize(123, "456") << std::endl;
     
     std::cout << is_core_type<Camera> << std::endl;
     
