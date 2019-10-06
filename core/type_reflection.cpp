@@ -60,11 +60,11 @@ bool TypeReflectionManager::is_core(std::string_view cls) const noexcept {
     return _parents.at(cls).empty();
 }
 
-CoreTypeVariant TypeReflectionManager::create(CoreTypeCreatorParameterSet &param, CoreTypeTag tag, std::string_view detail_name) {
+CoreTypeVariant TypeReflectionManager::create(const CoreTypeCreatorParameterSet &param, CoreTypeTag tag, std::string_view detail_name) {
     return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(param, tag, detail_name);
 }
 
-CoreTypeVariant TypeReflectionManager::create(CoreTypeCreatorParameterSet &param, std::string_view base_type, std::string_view detail_name) {
+CoreTypeVariant TypeReflectionManager::create(const CoreTypeCreatorParameterSet &param, std::string_view base_type, std::string_view detail_name) {
     return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(param, tag_of_core_type_name(base_type), detail_name);
 }
 
