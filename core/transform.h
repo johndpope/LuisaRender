@@ -9,7 +9,7 @@
 
 namespace luisa {
 
-core_class(Transform) {
+CORE_CLASS(Transform) {
 public:
     virtual glm::mat4 at(float time) = 0;
 };

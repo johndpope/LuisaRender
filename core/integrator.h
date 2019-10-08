@@ -8,7 +8,7 @@
 
 namespace luisa {
 
-core_class(Integrator) {
+CORE_CLASS(Integrator) {
 
 
 

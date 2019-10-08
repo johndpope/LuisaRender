@@ -270,7 +270,7 @@ constexpr int index_of_core_type_name(std::string_view name) noexcept {
 namespace _impl {
 
 template<typename ...T>
-constexpr auto is_core_type_name_impl(std::string_view name, std::tuple<T...> list) noexcept {
+constexpr auto is_core_type_name_impl(std::string_view name, std::tuple<T...> list [[maybe_unused]]) noexcept {
     return ((name == name_of_core_type_tag(T::tag)) || ...);
 }
 

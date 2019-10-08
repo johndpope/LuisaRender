@@ -24,7 +24,7 @@ void TypeReflectionRegistrationHelperImpl::register_class(std::string_view cls, 
 
 void TypeReflectionRegistrationHelperImpl::register_property(std::string_view prop, CoreTypeTag tag) noexcept {
     auto &m = TypeReflectionManager::instance();
-    assert(m._curr->find(prop) == m._curr->end());  // ensure that the property is not duplicate
+    assert(m._curr->find(prop) == m._curr->end());  // ensure that the PROPERTY is not duplicate
     (*m._curr)[prop] = tag;
 }
 

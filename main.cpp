@@ -1,4 +1,5 @@
 #include <iostream>
+#include <core/task.h>
 #include <core/camera.h>
 #include <core/material.h>
 #include <core/light.h>
