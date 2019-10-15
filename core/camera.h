@@ -14,11 +14,11 @@
 
 namespace luisa {
 
-core_class(Camera) {
+CORE_CLASS(Camera) {
 
 protected:
-    property(std::shared_ptr<Film>, film, CoreTypeTag::FILM);
-    property(std::shared_ptr<Transform>, transform,CoreTypeTag::TRANSFORM);
+    PROPERTY(std::shared_ptr<Film>, film, CoreTypeTag::FILM);
+    PROPERTY(std::shared_ptr<Transform>, transform,CoreTypeTag::TRANSFORM);
 
 public:
     [[nodiscard]] virtual glm::mat4 to_world() const noexcept = 0;

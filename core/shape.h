@@ -8,7 +8,7 @@
 
 namespace luisa {
 
-core_class(Shape) {
+CORE_CLASS(Shape) {
 
 
 

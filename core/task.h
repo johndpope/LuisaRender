@@ -8,13 +8,12 @@
 
 namespace luisa {
 
-core_class(Task) {
-
-protected:
-    property(std::shared_ptr<Camera>, camera, CoreTypeTag::CAMERA);
-    property(std::shared_ptr<Integrator>, intergrator, CoreTypeTag::INTEGRATOR);
-    property(std::shared_ptr<Shape>, geometry, CoreTypeTag::SHAPE);
-    property(std::shared_ptr<Saver>, saver, CoreTypeTag::SAVER);
+CORE_CLASS(Task) {
+    
+    PROPERTY(std::shared_ptr<Camera>, camera, CoreTypeTag::CAMERA) { _camera = params.front(); }
+    PROPERTY(std::shared_ptr<Integrator>, integrator, CoreTypeTag::INTEGRATOR) { _integrator = params.front(); }
+    PROPERTY(std::shared_ptr<Shape>, geometry, CoreTypeTag::SHAPE) { _geometry = params.front(); }
+    PROPERTY(std::shared_ptr<Saver>, saver, CoreTypeTag::SAVER) { _saver = params.front(); }
 
 };
 

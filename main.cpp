@@ -1,4 +1,5 @@
 #include <iostream>
+#include <core/task.h>
 #include <core/camera.h>
 #include <core/material.h>
 #include <core/light.h>
@@ -11,7 +12,7 @@ int main() {
     using namespace luisa;
     
     Parser parser;
-    parser.parse("resources/scenes/test.scene");
+    auto tasks = parser.parse("resources/scenes/test.scene");
     
     return 0;
 }

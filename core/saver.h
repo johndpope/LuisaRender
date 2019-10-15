@@ -9,10 +9,9 @@
 
 namespace luisa {
 
-core_class(Saver) {
-
-protected:
-    property(std::filesystem::path, directory, CoreTypeTag::STRING);
+CORE_CLASS(Saver) {
+    
+    PROPERTY(std::filesystem::path, directory, CoreTypeTag::STRING) { _directory = params.front(); }
 
 public:
     virtual void write(const std::shared_ptr<Film> &film, size_t id) = 0;
