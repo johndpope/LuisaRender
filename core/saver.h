@@ -10,8 +10,7 @@
 namespace luisa {
 
 CORE_CLASS(Saver) {
-
-protected:
+    
     PROPERTY(std::filesystem::path, directory, CoreTypeTag::STRING) { _directory = params.front(); }
 
 public:

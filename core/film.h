@@ -10,8 +10,7 @@
 namespace luisa {
 
 CORE_CLASS(Film) {
-
-protected:
+    
     PROPERTY(glm::uvec2, size, CoreTypeTag::INTEGER) {}
     PROPERTY(std::shared_ptr<Filter>, filter, CoreTypeTag::FILTER) {}
     

@@ -151,23 +151,23 @@ struct WrapBaseTag {
 
 #define implements ,
 
-#define DERIVED_CLASS(Cls, Parent)                                                                                  \
-    class Cls;                                                                                                      \
-    namespace _impl {                                                                                               \
-        template<> struct TypeReflectionInfoImpl<Cls> {                                                             \
-            static constexpr std::string_view name = #Cls;                                                          \
-            static constexpr auto is_core = is_core_type<Cls>;                                                      \
-            static_assert(is_core || name == name_of_core_type<Cls>, "Inconsistent core type name.");               \
-            static constexpr auto base_tag = is_core ? tag_of_core_type<Cls> : base_tag_of_derived_type<Parent>;    \
-            static constexpr std::string_view parent_name = TypeReflectionInfoImpl<Parent>::name;                   \
-            TypeReflectionInfoImpl() noexcept {                                                                     \
-                TypeReflectionRegistrationHelperImpl::register_class(name, parent_name);                            \
-            }                                                                                                       \
-        };                                                                                                          \
-        inline TypeReflectionInfoImpl<Cls> _refl_##Cls{};                                                           \
-    }                                                                                                               \
-    class Cls                                                                                                       \
-        : public virtual Parent,                                                                                    \
+#define DERIVED_CLASS(Cls, Parent)                                                                                \
+    class Cls;                                                                                                    \
+    namespace _impl {                                                                                             \
+        template<> struct TypeReflectionInfoImpl<Cls> {                                                           \
+            static constexpr std::string_view name = #Cls;                                                        \
+            static constexpr auto is_core = is_core_type<Cls>;                                                    \
+            static_assert(is_core || name == name_of_core_type<Cls>, "Inconsistent core type name.");             \
+            static constexpr auto base_tag = is_core ? tag_of_core_type<Cls> : base_tag_of_derived_type<Parent>;  \
+            static constexpr std::string_view parent_name = TypeReflectionInfoImpl<Parent>::name;                 \
+            TypeReflectionInfoImpl() noexcept {                                                                   \
+                TypeReflectionRegistrationHelperImpl::register_class(name, parent_name);                          \
+            }                                                                                                     \
+        };                                                                                                        \
+        inline TypeReflectionInfoImpl<Cls> _refl_##Cls{};                                                         \
+    }                                                                                                             \
+    class Cls                                                                                                     \
+        : public virtual Parent,                                                                                  \
           public virtual WrapBaseTag<_impl::TypeReflectionInfoImpl<Cls>::base_tag>
 
 #define CORE_CLASS(Cls)  \
@@ -194,7 +194,7 @@ struct WrapBaseTag {
     private:                                                                                                \
         void _decode_##name##_impl(const std::vector<TypeOfCoreTypeTag<tag>> &params)
 
-#define creator(detail_name)                                                                                             \
+#define CREATOR(detail_name)                                                                                             \
         static_assert(true);                                                                                             \
     private:                                                                                                             \
         inline static struct _refl_ctor_helper {                                                                         \
