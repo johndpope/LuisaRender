@@ -199,10 +199,10 @@ struct WrapBaseTag {
                 default_op(_##name);                                                                                                 \
             }                                                                                                                        \
         }                                                                                                                            \
-    private:                                                                                                                         \
+    private:
         void _decode_##name##_impl(const std::vector<TypeOfCoreTypeTag<tag>> &params)
 
-#define creator(detail_name)                                                                                             \
+#define CREATOR(detail_name)                                                                                             \
         static_assert(true);                                                                                             \
     private:                                                                                                             \
         inline static struct _refl_ctor_helper {                                                                         \

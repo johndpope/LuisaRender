@@ -16,8 +16,6 @@ protected:
     property(std::shared_ptr<Shape>, geometry, CoreTypeTag::SHAPE);
     property(std::shared_ptr<Saver>, saver, CoreTypeTag::SAVER);
 
-public:
-
 };
 
 }
