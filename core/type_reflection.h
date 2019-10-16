@@ -50,9 +50,13 @@ namespace _impl {
 template<CoreTypeTag tag>
 using MapCoreTypeTagToCreatorListImpl = std::unordered_map<std::string_view, CoreTypeCreator<tag>>;
 
+template<CoreTypeTag tag>
+using MapCoreTypeTagToDerivedTypeClassNameListImpl = std::unordered_map<std::string_view, std::string_view>;
+
 }
 
 using CoreTypeCreatorList = MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToCreatorListImpl>;
+using DerivedTypeClassNameList = MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToDerivedTypeClassNameListImpl>;
 
 class TypeReflectionManager {
 
@@ -65,9 +69,24 @@ private:
     std::unordered_map<std::string_view, PropertyList> _properties;
     PropertyList *_curr = nullptr;
     CoreTypeCreatorList _creators;
+    DerivedTypeClassNameList _derived_classes;
     
     friend _impl::TypeReflectionRegistrationHelperImpl;
     TypeReflectionManager() = default;
+    
+    template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
+    [[nodiscard]] std::string_view _derived_class_name_impl(
+        CoreTypeTag tag, std::string_view detail_name,
+        std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) const noexcept {
+        if (tag == first_tag) {
+            return derived_class_name<first_tag>(detail_name);
+        }
+        if constexpr (sizeof...(other_tags) != 0) {
+            return _derived_class_name_impl(tag, detail_name, std::tuple<WrapCoreTypeTag<other_tags>...>{});
+        }
+        assert(false);
+        return {};
+    }
 
 public:
     TypeReflectionManager(TypeReflectionManager &&) = delete;
@@ -82,8 +101,9 @@ public:
     [[nodiscard]] const std::vector<std::string_view> &classes() const noexcept;
     [[nodiscard]] bool is_core(std::string_view cls) const noexcept;
     [[nodiscard]] CoreTypeTag property_tag(std::string_view cls, std::string_view prop) const noexcept;
-    [[nodiscard]] CoreTypeVariant create(const CoreTypeCreatorParameterSet &param, CoreTypeTag tag, std::string_view detail_name = "");
-    [[nodiscard]] CoreTypeVariant create(const CoreTypeCreatorParameterSet &param, std::string_view base_type, std::string_view detail_name = "");
+    [[nodiscard]] CoreTypeVariant create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param);
+    [[nodiscard]] CoreTypeVariant create(std::string_view base_type, std::string_view detail_name, const CoreTypeCreatorParameterSet &param);
+    [[nodiscard]] std::string_view derived_class_name(CoreTypeTag tag, std::string_view detail_name) const noexcept;
     
     template<typename T>
     [[nodiscard]] static constexpr std::string_view name() noexcept {
@@ -106,11 +126,19 @@ public:
     }
     
     template<CoreTypeTag tag>
-    [[nodiscard]] auto create(const CoreTypeCreatorParameterSet &param, std::string_view detail_name = "") {
+    [[nodiscard]] auto create(std::string_view detail_name, const CoreTypeCreatorParameterSet &param) {
         assert(!is_core_type_tag_value_type<tag>);
         auto &&ctors = std::get<index_of_core_type_tag<tag>>(_creators);
         assert(ctors.find(detail_name) != ctors.end());
         return ctors.at(detail_name)(param);
+    }
+    
+    template<CoreTypeTag tag>
+    [[nodiscard]] auto derived_class_name(std::string_view detail_name) const noexcept {
+        assert(!is_core_type_tag_value_type<tag>);
+        auto &&class_list = std::get<index_of_core_type_tag<tag>>(_derived_classes);
+        assert(class_list.find(detail_name) != class_list.end());
+        return class_list.at(detail_name);
     }
 };
 
@@ -118,15 +146,15 @@ namespace _impl {
 
 template<typename Tuple>
 struct TypeReflectionCreationHelperImpl {
-    static CoreTypeVariant create(const CoreTypeCreatorParameterSet &, CoreTypeTag, std::string_view) { return {}; }
+    static CoreTypeVariant create(CoreTypeTag, std::string_view, const CoreTypeCreatorParameterSet &) { return {}; }
 };
 
 template<typename First, typename ...Others>
 struct TypeReflectionCreationHelperImpl<std::tuple<First, Others...>> {
-    static auto create(const CoreTypeCreatorParameterSet &param, CoreTypeTag tag, std::string_view detail_name) -> CoreTypeVariant {
+    static auto create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param) -> CoreTypeVariant {
         return tag == First::tag ?
-               TypeReflectionManager::instance().create<First::tag>(param, detail_name) :
-               TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create(param, tag, detail_name);
+               TypeReflectionManager::instance().create<First::tag>(detail_name, param) :
+               TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create(tag, detail_name, param);
     }
 };
 
@@ -137,7 +165,9 @@ namespace _impl {
 template<CoreTypeTag tag>
 void TypeReflectionRegistrationHelperImpl::register_creator(std::string_view name, CoreTypeCreator<tag> ctor) noexcept {
     auto &m = TypeReflectionManager::instance();
-    std::get<index_of_core_type_tag<tag>>(m._creators).emplace(name, std::move(ctor));
+    constexpr auto index = index_of_core_type_tag<tag>;
+    std::get<index>(m._creators).emplace(name, std::move(ctor));
+    std::get<index>(m._derived_classes).emplace(name, m._classes.back());
 }
 
 }
@@ -192,7 +222,7 @@ struct WrapBaseTag {
             return false;                                                                                   \
         }                                                                                                   \
     private:                                                                                                \
-        void _decode_##name##_impl(const std::vector<TypeOfCoreTypeTag<tag>> &params)
+        virtual void _decode_##name##_impl(const std::vector<TypeOfCoreTypeTag<tag>> &params)
 
 #define CREATOR(detail_name)                                                                                             \
         static_assert(true);                                                                                             \

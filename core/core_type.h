@@ -11,21 +11,13 @@
 namespace luisa {
 
 enum struct CoreTypeTag : uint32_t {
-    UNKNOWN,
+    CAMERA, SAMPLER, INTEGRATOR, TRANSFORM, MATERIAL, SHAPE, LIGHT, FILM, FILTER, SAVER, TASK,
     STRING, BOOL, FLOAT, INTEGER,
-    CAMERA, SAMPLER, INTEGRATOR, TRANSFORM, MATERIAL, SHAPE, LIGHT, FILM, FILTER, SAVER, TASK
+    UNKNOWN,
 };
 
 constexpr std::string_view name_of_core_type_tag(CoreTypeTag t) noexcept {
     switch (t) {
-        case CoreTypeTag::STRING:
-            return "String";
-        case CoreTypeTag::BOOL:
-            return "Bool";
-        case CoreTypeTag::FLOAT:
-            return "Float";
-        case CoreTypeTag::INTEGER:
-            return "Integer";
         case CoreTypeTag::CAMERA:
             return "Camera";
         case CoreTypeTag::SAMPLER:
@@ -48,6 +40,14 @@ constexpr std::string_view name_of_core_type_tag(CoreTypeTag t) noexcept {
             return "Saver";
         case CoreTypeTag::TASK:
             return "Task";
+        case CoreTypeTag::STRING:
+            return "String";
+        case CoreTypeTag::BOOL:
+            return "Bool";
+        case CoreTypeTag::FLOAT:
+            return "Float";
+        case CoreTypeTag::INTEGER:
+            return "Integer";
         default:
             break;
     }
@@ -62,10 +62,6 @@ struct CoreTypeInfo {
 };
 
 using CoreTypeInfoList = std::tuple<
-    CoreTypeInfo<std::string, CoreTypeTag::STRING, true>,
-    CoreTypeInfo<bool, CoreTypeTag::BOOL, true>,
-    CoreTypeInfo<float, CoreTypeTag::FLOAT, true>,
-    CoreTypeInfo<int32_t, CoreTypeTag::INTEGER, true>,
     CoreTypeInfo<class Camera, CoreTypeTag::CAMERA, false>,
     CoreTypeInfo<class Sampler, CoreTypeTag::SAMPLER, false>,
     CoreTypeInfo<class Integrator, CoreTypeTag::INTEGRATOR, false>,
@@ -76,7 +72,11 @@ using CoreTypeInfoList = std::tuple<
     CoreTypeInfo<class Film, CoreTypeTag::FILM, false>,
     CoreTypeInfo<class Filter, CoreTypeTag::FILTER, false>,
     CoreTypeInfo<class Saver, CoreTypeTag::SAVER, false>,
-    CoreTypeInfo<class Task, CoreTypeTag::TASK, false>>;
+    CoreTypeInfo<class Task, CoreTypeTag::TASK, false>,
+    CoreTypeInfo<std::string, CoreTypeTag::STRING, true>,
+    CoreTypeInfo<bool, CoreTypeTag::BOOL, true>,
+    CoreTypeInfo<float, CoreTypeTag::FLOAT, true>,
+    CoreTypeInfo<int32_t, CoreTypeTag::INTEGER, true>>;
 
 namespace _impl {
 
@@ -281,7 +281,7 @@ constexpr auto is_core_type_name(std::string_view name) noexcept {
 }
 
 template<CoreTypeTag tag>
-constexpr auto is_core_type_tag_value_type = InfoOfCoreTypeTag<tag>::is_value_type;
+constexpr auto is_core_type_tag_value_type = InfoOfCoreTypeTag<tag>::is_value;
 
 namespace _impl {
 
@@ -303,5 +303,51 @@ using VariantFromTuple = typename _impl::VariantFromTupleImpl<Tuple>::Type;
 
 using CoreTypeVariant = VariantFromTuple<CoreTypeList>;
 using CoreTypeVectorVariant = VariantFromTuple<MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToVectorImpl>>;
+
+template<CoreTypeTag tag>
+inline void core_type_vector_variant_emplace_back(CoreTypeVectorVariant &v, CoreTypeVariant elem) {
+    std::get<std::vector<TypeOfCoreTypeTag<tag>>>(v).emplace_back(std::get<TypeOfCoreTypeTag<tag>>(elem));
+}
+
+namespace _impl {
+
+template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
+inline void core_type_vector_variant_emplace_back_impl(
+    CoreTypeTag tag, CoreTypeVectorVariant &v, CoreTypeVariant elem,
+    std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) {
+
+    if (tag == first_tag) {
+        return core_type_vector_variant_emplace_back<first_tag>(v, std::move(elem));
+    }
+    if constexpr (sizeof...(other_tags) != 0) {
+        return core_type_vector_variant_emplace_back_impl(tag, v, std::move(elem), std::tuple<WrapCoreTypeTag<other_tags>...>{});
+    }
+    throw std::runtime_error{"unknown type."};
+}
+
+}
+
+inline void core_type_vector_variant_emplace_back(CoreTypeTag tag, CoreTypeVectorVariant &v, CoreTypeVariant elem) {
+    return _impl::core_type_vector_variant_emplace_back_impl(tag, v, std::move(elem), CoreTypeTagList{});
+}
+
+namespace _impl {
+
+template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
+[[nodiscard]] inline CoreTypeVectorVariant core_type_vector_variant_create_impl(CoreTypeTag tag, CoreTypeVariant elem, std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) {
+    if (tag == first_tag) {
+        return std::vector<TypeOfCoreTypeTag<first_tag>>{std::get<TypeOfCoreTypeTag<first_tag>>(elem)};
+    }
+    if constexpr (sizeof...(other_tags) != 0) {
+        return core_type_vector_variant_create_impl(tag, std::move(elem), std::tuple<WrapCoreTypeTag<other_tags>...>{});
+    }
+    throw std::runtime_error{"unknown type."};
+}
+
+}
+
+[[nodiscard]] inline CoreTypeVectorVariant core_type_vector_variant_create(CoreTypeTag tag, CoreTypeVariant elem) {
+    return _impl::core_type_vector_variant_create_impl(tag, std::move(elem), CoreTypeTagList{});
+}
 
 }

@@ -84,5 +84,5 @@ Task render : SingleShot {
 
 // define render tasks here
 tasks {
-  @render
+  @render, SingleShot {}
 }
