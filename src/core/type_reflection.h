@@ -20,7 +20,7 @@ namespace luisa {
 struct TypeReflectionError : public std::runtime_error {
     template<typename ...Args>
     TypeReflectionError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{serialize("TypeReflectionError: ", std::forward<Args>(args)..., " [ file: \"", file, "\", line: ", line, " ]")} {}
+        : std::runtime_error{serialize("TypeReflectionError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
 };
 
 #define THROW_TYPE_REFLECTION_ERROR(...)  throw TypeReflectionError{__FILE__, __LINE__, __VA_ARGS__}

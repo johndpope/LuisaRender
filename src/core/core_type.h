@@ -16,7 +16,7 @@ namespace luisa {
 struct CoreTypeError : std::runtime_error {
     template<typename ...Args>
     CoreTypeError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{serialize("CoreTypeError: ", std::forward<Args>(args)..., " [ file: \"", file, "\", line: ", line, " ]")} {}
+        : std::runtime_error{serialize("CoreTypeError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
 };
 
 #define THROW_CORE_TYPE_ERROR(...) throw CoreTypeError{__FILE__, __LINE__, __VA_ARGS__}

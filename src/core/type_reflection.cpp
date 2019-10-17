@@ -32,7 +32,7 @@ void TypeReflectionRegistrationHelperImpl::register_property(std::string_view pr
 const TypeReflectionManager::PropertyList &TypeReflectionManager::properties(std::string_view cls) const {
     auto iter = _properties.find(cls);
     if (iter == _properties.end()) {
-        THROW_TYPE_REFLECTION_ERROR("unregistered class ", cls, ".");
+        THROW_TYPE_REFLECTION_ERROR("unregistered class \"", cls, "\".");
     }
     return iter->second;
 }
@@ -45,7 +45,7 @@ TypeReflectionManager &TypeReflectionManager::instance() noexcept {
 std::string_view TypeReflectionManager::parent(std::string_view cls) const {
     auto iter = _parents.find(cls);
     if (iter == _parents.end()) {
-        THROW_TYPE_REFLECTION_ERROR("unregistered class ", cls, ".");
+        THROW_TYPE_REFLECTION_ERROR("unregistered class \"", cls, "\".");
     }
     return iter->second;
 }
@@ -58,7 +58,7 @@ CoreTypeTag TypeReflectionManager::property_tag(std::string_view cls, std::strin
     auto &&props = properties(cls);
     auto iter = props.find(prop);
     if (iter == props.end()) {
-        THROW_TYPE_REFLECTION_ERROR("unknown property in class ", cls, ".");
+        THROW_TYPE_REFLECTION_ERROR("unknown property \"", prop, "\" in class \"", cls, "\".");
     }
     return iter->second;
 }
@@ -66,7 +66,7 @@ CoreTypeTag TypeReflectionManager::property_tag(std::string_view cls, std::strin
 bool TypeReflectionManager::is_core(std::string_view cls) const {
     auto iter = _parents.find(cls);
     if (iter == _parents.end()) {
-        THROW_TYPE_REFLECTION_ERROR("unregistered class ", cls, ".");
+        THROW_TYPE_REFLECTION_ERROR("unregistered class \"", cls, "\".");
     }
     return iter->second.empty();
 }
