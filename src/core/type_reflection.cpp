@@ -24,15 +24,17 @@ void TypeReflectionRegistrationHelperImpl::register_class(std::string_view cls, 
 
 void TypeReflectionRegistrationHelperImpl::register_property(std::string_view prop, CoreTypeTag tag) noexcept {
     auto &m = TypeReflectionManager::instance();
-    assert(m._curr->find(prop) == m._curr->end());  // ensure that the PROPERTY is not duplicate
     (*m._curr)[prop] = tag;
 }
 
 }
 
-const TypeReflectionManager::PropertyList &TypeReflectionManager::properties(std::string_view cls) const noexcept {
-    assert(_properties.find(cls) != _properties.end());
-    return _properties.at(cls);
+const TypeReflectionManager::PropertyList &TypeReflectionManager::properties(std::string_view cls) const {
+    auto iter = _properties.find(cls);
+    if (iter == _properties.end()) {
+        THROW_TYPE_REFLECTION_ERROR("unregistered class ", cls, ".");
+    }
+    return iter->second;
 }
 
 TypeReflectionManager &TypeReflectionManager::instance() noexcept {
@@ -40,24 +42,33 @@ TypeReflectionManager &TypeReflectionManager::instance() noexcept {
     return manager;
 }
 
-std::string_view TypeReflectionManager::parent(std::string_view cls) const noexcept {
-    assert(_parents.find(cls) != _parents.end());
-    return _parents.at(cls);
+std::string_view TypeReflectionManager::parent(std::string_view cls) const {
+    auto iter = _parents.find(cls);
+    if (iter == _parents.end()) {
+        THROW_TYPE_REFLECTION_ERROR("unregistered class ", cls, ".");
+    }
+    return iter->second;
 }
 
 const std::vector<std::string_view> &TypeReflectionManager::classes() const noexcept {
     return _classes;
 }
 
-CoreTypeTag TypeReflectionManager::property_tag(std::string_view cls, std::string_view prop) const noexcept {
+CoreTypeTag TypeReflectionManager::property_tag(std::string_view cls, std::string_view prop) const {
     auto &&props = properties(cls);
     auto iter = props.find(prop);
-    return iter == props.end() ? CoreTypeTag::UNKNOWN : iter->second;
+    if (iter == props.end()) {
+        THROW_TYPE_REFLECTION_ERROR("unknown property in class ", cls, ".");
+    }
+    return iter->second;
 }
 
-bool TypeReflectionManager::is_core(std::string_view cls) const noexcept {
-    assert(_parents.find(cls) != _parents.end());
-    return _parents.at(cls).empty();
+bool TypeReflectionManager::is_core(std::string_view cls) const {
+    auto iter = _parents.find(cls);
+    if (iter == _parents.end()) {
+        THROW_TYPE_REFLECTION_ERROR("unregistered class ", cls, ".");
+    }
+    return iter->second.empty();
 }
 
 CoreTypeVariant TypeReflectionManager::create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param) {
@@ -68,7 +79,7 @@ CoreTypeVariant TypeReflectionManager::create(std::string_view base_type, std::s
     return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(tag_of_core_type_name(base_type), detail_name, param);
 }
 
-std::string_view TypeReflectionManager::derived_class_name(CoreTypeTag tag, std::string_view detail_name) const noexcept {
+std::string_view TypeReflectionManager::derived_class_name(CoreTypeTag tag, std::string_view detail_name) const {
     return _derived_class_name_impl(tag, detail_name, CoreTypeTagList{});
 }
 

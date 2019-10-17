@@ -8,7 +8,7 @@ namespace luisa {
 
 void Parser::_skip_blanks_and_comments() {
     if (!_peeked.empty()) {
-        throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): peeked token \"", _peeked, "\" should not be skipped.")};
+        THROW_PARSER_ERROR(_curr_line, _curr_col, "peeked token \"", _peeked, "\" should not be skipped.");
     }
     _peeked = {};
     while (!_remaining.empty()) {
@@ -30,7 +30,7 @@ void Parser::_skip_blanks_and_comments() {
             _remaining = _remaining.substr(1);
             _next_col++;
             if (_remaining.empty() || _remaining.front() != '/') {
-                throw std::runtime_error{serialize("ParserError (Line ", _next_line, ", Col ", _next_col, "): expected '/'.")};
+                THROW_PARSER_ERROR(_next_line, _next_col, "expected '/' at the beginning of comments.");
             }
             for (; !_remaining.empty() && _remaining.front() != '\r' && _remaining.front() != '\n'; _remaining = _remaining.substr(1)) {
                 _next_col++;
@@ -46,7 +46,7 @@ void Parser::_skip_blanks_and_comments() {
 std::string_view Parser::_peek() {
     if (_peeked.empty()) {
         if (_remaining.empty()) {
-            throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): peek at the end of the file.")};
+            THROW_PARSER_ERROR(_curr_line, _curr_col, "peek at the end of the file.");
         }
         if (_remaining.front() == '{' || _remaining.front() == '}' || _remaining.front() == ':' || _remaining.front() == ',' || _remaining.front() == '@') {  // symbols
             _peeked = _remaining.substr(0, 1);
@@ -71,7 +71,7 @@ std::string_view Parser::_peek() {
             }
             _next_col += i + 1;
             if (i >= _remaining.size() || _remaining[i] != '"') {
-                throw std::runtime_error{serialize("ParserError (Line ", _next_line, ", Col ", _next_col, "): expected '\"'.")};
+                THROW_PARSER_ERROR(_next_line, _next_col, "expected '\"'.");
             }
             _peeked = _remaining.substr(0, i + 1);
             _remaining = _remaining.substr(i + 1);
@@ -82,7 +82,7 @@ std::string_view Parser::_peek() {
 
 void Parser::_pop() {
     if (_peeked.empty()) {
-        throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): token not peeked before being popped.")};
+        THROW_PARSER_ERROR(_curr_line, _curr_col, "token not peeked before being popped.");
     }
     _peeked = {};
     _curr_line = _next_line;
@@ -97,7 +97,7 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
             _pop();  // tasks
             tasks = _parse_property_setter_parameter_list_impl<CoreTypeTag::TASK>();
             if (!_finished()) {
-                throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): tasks should be defined at the end of the file.")};
+                THROW_PARSER_ERROR(_curr_line, _curr_col, "tasks should be defined at the end of the file.");
             }
             break;
         } else {
@@ -107,7 +107,7 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
             auto name = _peek();
             _pop();  // name
             if (_created.find(name) != _created.end()) {
-                throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): duplicated object name \"", name, "\".")};
+                THROW_PARSER_ERROR(_curr_line, _curr_col, "duplicated object name \"", name, "\".");
             }
             _match(":");
             auto detail_type = _peek();
@@ -122,7 +122,7 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
 
 void Parser::_match(std::string_view token) {
     if (_peek() != token) {
-        throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): expected \"", token, "\", got \"", _peek(), "\".")};
+        THROW_PARSER_ERROR(_curr_line, _curr_col, "expected \"", token, "\", got \"", _peek(), "\".");
     }
     _pop();
 }
@@ -138,7 +138,7 @@ std::vector<std::shared_ptr<Task>> Parser::parse(std::filesystem::path file_path
     _remaining = {};
     std::ifstream file{file_path};
     if (!file.is_open()) {
-        throw std::runtime_error{serialize("Failed to open file: ", file_path)};
+        THROW_PARSER_ERROR(0, 0, "failed to open file: ", file_path);
     }
     _source = std::string{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     _remaining = _source;
@@ -148,6 +148,35 @@ std::vector<std::shared_ptr<Task>> Parser::parse(std::filesystem::path file_path
 
 bool Parser::_finished() const noexcept {
     return _peeked.empty() && _remaining.empty();
+}
+
+CoreTypeCreatorParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type) {
+    CoreTypeCreatorParameterSet param_set;
+    _match("{");
+    auto class_name = TypeReflectionManager::instance().derived_class_name(tag, detail_type);
+    while (_peek() != "}") {
+        auto property_name = _peek();
+        if (param_set.find(property_name) != param_set.end()) {
+            THROW_PARSER_ERROR(_curr_line, _curr_col, "duplicated property \"", property_name, "\".");
+        }
+        auto property_tag = TypeReflectionManager::instance().property_tag(class_name, property_name);
+        if (_peek() == "{") {  // setter list
+            param_set.emplace(property_name, _parse_property_setter_parameter_list(property_tag));
+        } else if (_peek() == ":") {  // convenience creation
+            _pop();  // :
+            auto property_detail_type = _peek();
+            _pop();  // detail type
+            auto property_creator_param_set = _parse_creator_parameter_set(property_tag, property_detail_type);
+            auto property_instance = TypeReflectionManager::instance().create(property_tag, property_detail_type, property_creator_param_set);
+            param_set.emplace(property_name, core_type_vector_variant_create(property_tag, property_instance));
+        }
+    }
+    _match("}");
+    return param_set;
+}
+
+CoreTypeVectorVariant Parser::_parse_property_setter_parameter_list(CoreTypeTag tag) {
+    return _parse_property_setter_parameter_list(tag, CoreTypeTagList{});
 }
 
 }

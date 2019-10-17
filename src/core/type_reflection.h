@@ -11,10 +11,19 @@
 #include <variant>
 #include <unordered_map>
 #include <functional>
+#include <exception>
 
 #include "core_type.h"
 
 namespace luisa {
+
+struct TypeReflectionError : public std::runtime_error {
+    template<typename ...Args>
+    TypeReflectionError(std::string_view file, size_t line, Args &&...args) noexcept
+        : std::runtime_error{serialize("TypeReflectionError: ", std::forward<Args>(args)..., " [ file: \"", file, "\", line: ", line, " ]")} {}
+};
+
+#define THROW_TYPE_REFLECTION_ERROR(...)  throw TypeReflectionError{__FILE__, __LINE__, __VA_ARGS__}
 
 struct Empty {};  // convenience base type for core types
 
@@ -77,15 +86,14 @@ private:
     template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
     [[nodiscard]] std::string_view _derived_class_name_impl(
         CoreTypeTag tag, std::string_view detail_name,
-        std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) const noexcept {
+        std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) const {
         if (tag == first_tag) {
             return derived_class_name<first_tag>(detail_name);
         }
         if constexpr (sizeof...(other_tags) != 0) {
             return _derived_class_name_impl(tag, detail_name, std::tuple<WrapCoreTypeTag<other_tags>...>{});
         }
-        assert(false);
-        return {};
+        THROW_TYPE_REFLECTION_ERROR("unknown tag.");
     }
 
 public:
@@ -96,14 +104,14 @@ public:
 
 public:
     [[nodiscard]] static TypeReflectionManager &instance() noexcept;
-    [[nodiscard]] const PropertyList &properties(std::string_view cls) const noexcept;
-    [[nodiscard]] std::string_view parent(std::string_view cls) const noexcept;
+    [[nodiscard]] const PropertyList &properties(std::string_view cls) const;
+    [[nodiscard]] std::string_view parent(std::string_view cls) const;
     [[nodiscard]] const std::vector<std::string_view> &classes() const noexcept;
-    [[nodiscard]] bool is_core(std::string_view cls) const noexcept;
-    [[nodiscard]] CoreTypeTag property_tag(std::string_view cls, std::string_view prop) const noexcept;
+    [[nodiscard]] bool is_core(std::string_view cls) const;
+    [[nodiscard]] CoreTypeTag property_tag(std::string_view cls, std::string_view prop) const;
     [[nodiscard]] CoreTypeVariant create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param);
     [[nodiscard]] CoreTypeVariant create(std::string_view base_type, std::string_view detail_name, const CoreTypeCreatorParameterSet &param);
-    [[nodiscard]] std::string_view derived_class_name(CoreTypeTag tag, std::string_view detail_name) const noexcept;
+    [[nodiscard]] std::string_view derived_class_name(CoreTypeTag tag, std::string_view detail_name) const;
     
     template<typename T>
     [[nodiscard]] static constexpr std::string_view name() noexcept {
@@ -116,29 +124,33 @@ public:
     }
     
     template<typename T>
-    [[nodiscard]] const PropertyList &properties() const noexcept {
+    [[nodiscard]] const PropertyList &properties() const {
         return properties(name<T>());
     }
     
     template<typename T>
-    [[nodiscard]] CoreTypeTag property_tag(std::string_view prop) const noexcept {
+    [[nodiscard]] CoreTypeTag property_tag(std::string_view prop) const {
         return property_tag(name<T>(), prop);
     }
     
     template<CoreTypeTag tag>
     [[nodiscard]] auto create(std::string_view detail_name, const CoreTypeCreatorParameterSet &param) {
-        assert(!is_core_type_tag_value_type<tag>);
         auto &&ctors = std::get<index_of_core_type_tag<tag>>(_creators);
-        assert(ctors.find(detail_name) != ctors.end());
-        return ctors.at(detail_name)(param);
+        auto iter = ctors.find(detail_name);
+        if (iter == ctors.end()) {
+            THROW_TYPE_REFLECTION_ERROR("creator not registered for class ", name_of_core_type_tag(tag), "::", detail_name, ".");
+        }
+        return iter->second(param);
     }
     
     template<CoreTypeTag tag>
-    [[nodiscard]] auto derived_class_name(std::string_view detail_name) const noexcept {
-        assert(!is_core_type_tag_value_type<tag>);
+    [[nodiscard]] std::string_view derived_class_name(std::string_view detail_name) const {
         auto &&class_list = std::get<index_of_core_type_tag<tag>>(_derived_classes);
-        assert(class_list.find(detail_name) != class_list.end());
-        return class_list.at(detail_name);
+        auto iter = class_list.find(detail_name);
+        if (iter == class_list.end()) {
+            THROW_TYPE_REFLECTION_ERROR("unregistered derived class ", name_of_core_type_tag(tag), "::", detail_name, ".");
+        }
+        return iter->second;
     }
 };
 

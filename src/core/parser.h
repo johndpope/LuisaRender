@@ -17,6 +17,14 @@
 
 namespace luisa {
 
+struct ParserError : std::runtime_error {
+    template<typename ...Args>
+    ParserError(std::string_view file, size_t line, size_t curr_line, size_t curr_col, Args &&...args) noexcept
+        : std::runtime_error{serialize("ParserError (Line ", curr_line, ", Col ", curr_col, "): ", std::forward<Args>(args)..., " [ file: \"", file, "\", line: ", line, " ]")} {}
+};
+
+#define THROW_PARSER_ERROR(...) throw ParserError{__FILE__, __LINE__, __VA_ARGS__}
+
 class Parser {
 
 private:
@@ -52,7 +60,7 @@ private:
                 } else if (token == "false") {
                     v.emplace_back(false);
                 } else {
-                    throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): unexpected value \"", token, "\" for bool type (expected true or false).")};
+                    THROW_PARSER_ERROR(_curr_line, _curr_col, "unexpected value \"", token, "\" for bool type (expected true or false).");
                 }
                 _pop();
             } else if constexpr (tag == CoreTypeTag::FLOAT) {  // special handling for floats
@@ -60,7 +68,7 @@ private:
                 auto count = 0ul;
                 auto value = stof(std::string{token}, &count);
                 if (count != token.size()) {
-                    throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): Failed to convert \"", token, "\" into float.")};
+                    THROW_PARSER_ERROR(_curr_line, _curr_col, "failed to convert \"", token, "\" into float.");
                 }
                 _pop();
                 v.emplace_back(value);
@@ -69,7 +77,7 @@ private:
                 auto count = 0ul;
                 auto value = stoi(std::string{token}, &count);
                 if (count != token.size()) {
-                    throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): Failed to convert \"", token, "\" into integer.")};
+                    THROW_PARSER_ERROR(_curr_line, _curr_col, "failed to convert \"", token, "\" into integer.");
                 }
                 _pop();
                 v.emplace_back(value);
@@ -96,41 +104,14 @@ private:
     template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
     [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(CoreTypeTag tag, std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) {
         if (tag == first_tag) { return _parse_property_setter_parameter_list_impl<first_tag>(); }
-        if constexpr (sizeof...(other_tags) == 0) {
-            throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): unknown type to parser.")};
-        } else {
+        if constexpr (sizeof...(other_tags) != 0) {
             return _parse_property_setter_parameter_list(tag, std::tuple<WrapCoreTypeTag<other_tags>...>{});
         }
+        THROW_PARSER_ERROR(_curr_line, _curr_col, "unknown type tag to parse.");
     }
     
-    [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(CoreTypeTag tag) {
-        return _parse_property_setter_parameter_list(tag, CoreTypeTagList{});
-    }
-    
-    [[nodiscard]] CoreTypeCreatorParameterSet _parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type) {
-        CoreTypeCreatorParameterSet param_set;
-        _match("{");
-        auto class_name = TypeReflectionManager::instance().derived_class_name(tag, detail_type);
-        while (_peek() != "}") {
-            auto property_name = _peek();
-            if (param_set.find(property_name) != param_set.end()) {
-                throw std::runtime_error{serialize("ParserError (Line ", _curr_line, ", Col ", _curr_col, "): duplicated property \"", property_name, "\".")};
-            }
-            auto property_tag = TypeReflectionManager::instance().property_tag(class_name, property_name);
-            if (_peek() == "{") {  // setter list
-                param_set.emplace(property_name, _parse_property_setter_parameter_list(property_tag));
-            } else if (_peek() == ":") {  // convenience creation
-                _pop();  // :
-                auto property_detail_type = _peek();
-                _pop();  // detail type
-                auto property_creator_param_set = _parse_creator_parameter_set(property_tag, property_detail_type);
-                auto property_instance = TypeReflectionManager::instance().create(property_tag, property_detail_type, property_creator_param_set);
-                param_set.emplace(property_name, core_type_vector_variant_create(property_tag, property_instance));
-            }
-        }
-        _match("}");
-        return param_set;
-    }
+    [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(CoreTypeTag tag);
+    [[nodiscard]] CoreTypeCreatorParameterSet _parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type);
 
 public:
     [[nodiscard]] std::vector<std::shared_ptr<Task>> parse(std::filesystem::path file_path);
