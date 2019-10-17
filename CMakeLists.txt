@@ -42,12 +42,11 @@ link_libraries(assimp)
 add_definitions(-DRAPIDJSON_HAS_STDSTRING=1)
 include_directories(thirdparty/assimp/contrib/rapidjson/include)
 
-include_directories(.)
-
 add_subdirectory(kernels)
 
-add_subdirectory(core)
-link_libraries(core)
+include_directories(src)
+add_subdirectory(src)
+link_libraries(luisa_render)
 
 link_libraries("-framework Foundation" "-framework Metal" "-framework Metalkit" "-framework MetalPerformanceShaders")
 
