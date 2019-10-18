@@ -1,13 +1,5 @@
 #include <iostream>
-#include <core/task.h>
-#include <core/camera.h>
-#include <core/material.h>
-#include <core/light.h>
-#include <core/integrator.h>
-#include <core/string_manipulation.h>
-#include <core/parser.h>
-
-//#include <transforms/static_camera_control.h>
+#include <luisa_render.h>
 
 int main() {
     

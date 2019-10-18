@@ -195,12 +195,6 @@ struct WrapBaseTag {
 
 #define implements ,
 
-#ifdef LUISA_RENDER_CLASS_IMPLEMENTATION_FILE
-#define DO_REGISTRATION_IF_NEEDED(Cls) namespace _impl { auto _refl_##Cls = TypeReflectionInfoImpl<Cls>::do_register(); }
-#else
-#define DO_REGISTRATION_IF_NEEDED(Cls)
-#endif
-
 #define DERIVED_CLASS(Cls, Parent)                                                                                \
     class Cls;                                                                                                    \
     namespace _impl {                                                                                             \
@@ -215,7 +209,7 @@ struct WrapBaseTag {
                 return 0;                                                                                         \
             }                                                                                                     \
         };                                                                                                        \
-        DO_REGISTRATION_IF_NEEDED(Cls)                                                                            \
+        inline auto _refl_##Cls = TypeReflectionInfoImpl<Cls>::do_register();                                     \
     }                                                                                                             \
     class Cls                                                                                                     \
         : public virtual Parent,                                                                                  \
@@ -244,16 +238,16 @@ struct WrapBaseTag {
     private:                                                                                                \
         virtual void _decode_##name##_impl(const std::vector<TypeOfCoreTypeTag<tag>> &params)
 
-#define CREATOR(detail_name)                                                                                             \
-        static_assert(true);                                                                                             \
-    private:                                                                                                             \
-        inline static struct _refl_ctor_helper {                                                                         \
-            _refl_ctor_helper() noexcept {                                                                               \
-                _impl::TypeReflectionRegistrationHelperImpl::register_creator<base_tag>(detail_name, [] (auto &param) {  \
-                    return create(param);                                                                                \
-                });                                                                                                      \
-            }                                                                                                            \
-        } _refl_ctor{};                                                                                                  \
-    public:                                                                                                              \
-        [[nodiscard]] static TypeOfCoreTypeTag<base_tag> create(const CoreTypeCreatorParameterSet &param_set)
+#define CREATOR(detail_name)                                                                                                    \
+        static_assert(true);                                                                                                    \
+    private:                                                                                                                    \
+        inline static struct _refl_ctor_helper {                                                                                \
+            _refl_ctor_helper() noexcept {                                                                                      \
+                _impl::TypeReflectionRegistrationHelperImpl::register_creator<base_tag>(detail_name, [] (auto &param) {         \
+                    return create(param);                                                                                       \
+                });                                                                                                             \
+            }                                                                                                                   \
+        } _refl_ctor{};                                                                                                         \
+    public:                                                                                                                     \
+        [[nodiscard]] static TypeOfCoreTypeTag<base_tag> create(const CoreTypeCreatorParameterSet &param_set [[maybe_unused]])
         
