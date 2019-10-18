@@ -25,7 +25,9 @@ struct TypeReflectionError : public std::runtime_error {
 
 #define THROW_TYPE_REFLECTION_ERROR(...)  throw TypeReflectionError{__FILE__, __LINE__, __VA_ARGS__}
 
-struct Empty {};  // convenience base type for core types
+struct Empty {  // convenience base type for core types
+    virtual ~Empty() noexcept = default;
+};
 
 using CoreTypeCreatorParameterSet = std::unordered_map<std::string_view, CoreTypeVectorVariant>;
 
@@ -193,20 +195,27 @@ struct WrapBaseTag {
 
 #define implements ,
 
+#ifdef LUISA_RENDER_CLASS_IMPLEMENTATION_FILE
+#define DO_REGISTRATION_IF_NEEDED(Cls) namespace _impl { auto _refl_##Cls = TypeReflectionInfoImpl<Cls>::do_register(); }
+#else
+#define DO_REGISTRATION_IF_NEEDED(Cls)
+#endif
+
 #define DERIVED_CLASS(Cls, Parent)                                                                                \
     class Cls;                                                                                                    \
     namespace _impl {                                                                                             \
         template<> struct TypeReflectionInfoImpl<Cls> {                                                           \
             static constexpr std::string_view name = #Cls;                                                        \
             static constexpr auto is_core = is_core_type<Cls>;                                                    \
-            static_assert(is_core || name == name_of_core_type<Cls>, "Inconsistent core type name.");             \
+            static_assert(!is_core || name == name_of_core_type<Cls>, "Inconsistent core type name: "#Cls);       \
             static constexpr auto base_tag = is_core ? tag_of_core_type<Cls> : base_tag_of_derived_type<Parent>;  \
             static constexpr std::string_view parent_name = TypeReflectionInfoImpl<Parent>::name;                 \
-            TypeReflectionInfoImpl() noexcept {                                                                   \
+            static auto do_register() noexcept {                                                                  \
                 TypeReflectionRegistrationHelperImpl::register_class(name, parent_name);                          \
+                return 0;                                                                                         \
             }                                                                                                     \
         };                                                                                                        \
-        inline TypeReflectionInfoImpl<Cls> _refl_##Cls{};                                                         \
+        DO_REGISTRATION_IF_NEEDED(Cls)                                                                            \
     }                                                                                                             \
     class Cls                                                                                                     \
         : public virtual Parent,                                                                                  \
@@ -225,8 +234,7 @@ struct WrapBaseTag {
         } _refl_##name{};                                                                                   \
     protected:                                                                                              \
         Type _##name{};                                                                                     \
-    public:                                                                                                 \
-        bool decode_##name(const CoreTypeCreatorParameterSet &param_set) {                                  \
+        bool _decode_##name(const CoreTypeCreatorParameterSet &param_set) {                                 \
             if (auto iter = param_set.find(#name); iter != param_set.end()) {                               \
                 _decode_##name##_impl(std::get<std::vector<TypeOfCoreTypeTag<tag>>>(param_set.at(#name)));  \
                 return true;                                                                                \
@@ -247,5 +255,5 @@ struct WrapBaseTag {
             }                                                                                                            \
         } _refl_ctor{};                                                                                                  \
     public:                                                                                                              \
-        [[nodiscard]] static TypeOfCoreTypeTag<tag> create(const CoreTypeCreatorParameterSet &param_set)
+        [[nodiscard]] static TypeOfCoreTypeTag<base_tag> create(const CoreTypeCreatorParameterSet &param_set)
         

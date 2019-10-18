@@ -102,7 +102,10 @@ private:
     }
     
     template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
-    [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(CoreTypeTag tag, std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) {
+    [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(
+        CoreTypeTag tag,
+        std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) {
+        
         if (tag == first_tag) { return _parse_property_setter_parameter_list_impl<first_tag>(); }
         if constexpr (sizeof...(other_tags) != 0) {
             return _parse_property_setter_parameter_list(tag, std::tuple<WrapCoreTypeTag<other_tags>...>{});

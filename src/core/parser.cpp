@@ -159,6 +159,7 @@ CoreTypeCreatorParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag
         if (param_set.find(property_name) != param_set.end()) {
             THROW_PARSER_ERROR(_curr_line, _curr_col, "duplicated property \"", property_name, "\".");
         }
+        _pop();  // property name
         auto property_tag = TypeReflectionManager::instance().property_tag(class_name, property_name);
         if (_peek() == "{") {  // setter list
             param_set.emplace(property_name, _parse_property_setter_parameter_list(property_tag));

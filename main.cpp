@@ -7,6 +7,8 @@
 #include <core/string_manipulation.h>
 #include <core/parser.h>
 
+//#include <transforms/static_camera_control.h>
+
 int main() {
     
     using namespace luisa;
