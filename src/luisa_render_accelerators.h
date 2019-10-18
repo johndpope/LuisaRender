@@ -3,5 +3,3 @@
 //
 
 #pragma once
-
-#include "integrators/path_tracing.h"

@@ -5,6 +5,8 @@
 #pragma once
 
 #include "core/parser.h"
+
+#include "core/accelerator.h"
 #include "core/camera.h"
 #include "core/film.h"
 #include "core/filter.h"
@@ -15,8 +17,10 @@
 #include "core/saver.h"
 #include "core/shape.h"
 #include "core/task.h"
+#include "core/texture.h"
 #include "core/transform.h"
 
+#include "luisa_render_accelerators.h"
 #include "luisa_render_cameras.h"
 #include "luisa_render_films.h"
 #include "luisa_render_filters.h"
@@ -27,4 +31,5 @@
 #include "luisa_render_savers.h"
 #include "luisa_render_shapes.h"
 #include "luisa_render_tasks.h"
+#include "luisa_render_textures.h"
 #include "luisa_render_transforms.h"

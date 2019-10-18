@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <functional>
 #include <exception>
+#include <iostream>
 
 #include "core_type.h"
 
@@ -250,4 +251,8 @@ struct WrapBaseTag {
         } _refl_ctor{};                                                                                                         \
     public:                                                                                                                     \
         [[nodiscard]] static TypeOfCoreTypeTag<base_tag> create(const CoreTypeCreatorParameterSet &param_set [[maybe_unused]])
-        
+
+#define DECODER                                                                              \
+        static_assert(true);                                                                 \
+    protected:                                                                               \
+        virtual void _decode(const CoreTypeCreatorParameterSet &param_set [[maybe_unused]])

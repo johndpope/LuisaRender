@@ -15,8 +15,7 @@
 namespace luisa {
 
 CORE_CLASS(Camera) {
-
-protected:
+    
     PROPERTY(std::shared_ptr<Film>, film, CoreTypeTag::FILM) {
         _film = params[0];
     }
@@ -24,9 +23,12 @@ protected:
     PROPERTY(std::shared_ptr<Transform>, transform, CoreTypeTag::TRANSFORM) {
         _transform = params[0];
     }
-
-public:
-    [[nodiscard]] virtual glm::mat4 to_world() const noexcept = 0;
+    
+    DECODER {
+        if (!_decode_film(param_set)) {}
+        if (!_decode_transform(param_set)) {}
+    };
+    
 };
 
 }

@@ -163,8 +163,8 @@ CoreTypeCreatorParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag
         auto property_tag = TypeReflectionManager::instance().property_tag(class_name, property_name);
         if (_peek() == "{") {  // setter list
             param_set.emplace(property_name, _parse_property_setter_parameter_list(property_tag));
-        } else if (_peek() == ":") {  // convenience creation
-            _pop();  // :
+        } else {  // convenience creation
+            _match(":");
             auto property_detail_type = _peek();
             _pop();  // detail type
             auto property_creator_param_set = _parse_creator_parameter_set(property_tag, property_detail_type);

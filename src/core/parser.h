@@ -52,7 +52,8 @@ private:
         _match("{");
         while (_peek() != "}") {
             if constexpr (tag == CoreTypeTag::STRING) {  // special handling for strings
-            
+                auto token = _peek();
+                
             } else if constexpr (tag == CoreTypeTag::BOOL) {  // special handling for bools
                 auto token = _peek();
                 if (token == "true") {

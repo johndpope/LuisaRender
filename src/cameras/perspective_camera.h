@@ -24,7 +24,8 @@ DERIVED_CLASS(PerspectiveCamera, Camera) {
     
     CREATOR("Perspective") {
         auto camera = std::make_shared<PerspectiveCamera>();
-        
+        camera->_decode(param_set);
+        return camera;
     }
 
 };

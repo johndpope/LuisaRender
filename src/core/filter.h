@@ -13,6 +13,10 @@ CORE_CLASS(Filter) {
     PROPERTY(float, radius, CoreTypeTag::FLOAT) {
         _radius = params[0];
     }
+    
+    DECODER {
+        if (!_decode_radius(param_set)) { _radius = 1.0f; }
+    };
 
 };
 

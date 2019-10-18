@@ -8,12 +8,10 @@
 
 namespace luisa {
 
-CORE_CLASS(Sampler) {
-    
-    DECODER {
-    
-    };
+CORE_CLASS(Accelerator) {
 
 };
 
 }
+
+

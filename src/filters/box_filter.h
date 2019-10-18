@@ -11,7 +11,9 @@ namespace luisa {
 DERIVED_CLASS(BoxFilter, Filter) {
     
     CREATOR("Box") {
-        return std::make_shared<BoxFilter>();
+        auto filter = std::make_shared<BoxFilter>();
+        filter->_decode(param_set);
+        return filter;
     }
     
 };

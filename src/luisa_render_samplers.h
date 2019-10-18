@@ -3,3 +3,5 @@
 //
 
 #pragma once
+
+#include "samplers/halton_sampler.h"

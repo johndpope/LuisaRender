@@ -20,6 +20,16 @@ CORE_CLASS(Film) {
         _filter = params[0];
     }
     
+    DECODER {
+        if (!_decode_size(param_set)) {
+            std::cerr << "Film size not defined, using default: 1280x720." << std::endl;
+            _size = glm::uvec2{1280, 720};
+        }
+        if (!_decode_filter(param_set)) {
+            std::cerr << "Filter not defined, using default: Neareast." << std::endl;
+        }
+    };
+    
 };
 
 }

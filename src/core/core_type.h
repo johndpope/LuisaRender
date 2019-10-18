@@ -22,7 +22,7 @@ struct CoreTypeError : std::runtime_error {
 #define THROW_CORE_TYPE_ERROR(...) throw CoreTypeError{__FILE__, __LINE__, __VA_ARGS__}
 
 enum struct CoreTypeTag : uint32_t {
-    CAMERA, SAMPLER, INTEGRATOR, TRANSFORM, MATERIAL, SHAPE, LIGHT, FILM, FILTER, SAVER, TASK,
+    CAMERA, SAMPLER, INTEGRATOR, ACCELERATOR, TRANSFORM, MATERIAL, SHAPE, LIGHT, FILM, TEXTURE, FILTER, SAVER, TASK,
     STRING, BOOL, FLOAT, INTEGER,
     UNKNOWN,
 };
@@ -35,6 +35,8 @@ constexpr std::string_view name_of_core_type_tag(CoreTypeTag t) noexcept {
             return "Sampler";
         case CoreTypeTag::INTEGRATOR:
             return "Integrator";
+        case CoreTypeTag::ACCELERATOR:
+            return "Accelerator";
         case CoreTypeTag::TRANSFORM:
             return "Transform";
         case CoreTypeTag::MATERIAL:
@@ -45,6 +47,8 @@ constexpr std::string_view name_of_core_type_tag(CoreTypeTag t) noexcept {
             return "Light";
         case CoreTypeTag::FILM:
             return "Film";
+        case CoreTypeTag::TEXTURE:
+            return "Texture";
         case CoreTypeTag::FILTER:
             return "Filter";
         case CoreTypeTag::SAVER:
@@ -76,11 +80,13 @@ using CoreTypeInfoList = std::tuple<
     CoreTypeInfo<class Camera, CoreTypeTag::CAMERA, false>,
     CoreTypeInfo<class Sampler, CoreTypeTag::SAMPLER, false>,
     CoreTypeInfo<class Integrator, CoreTypeTag::INTEGRATOR, false>,
+    CoreTypeInfo<class Accelerator, CoreTypeTag::ACCELERATOR, false>,
     CoreTypeInfo<class Transform, CoreTypeTag::TRANSFORM, false>,
     CoreTypeInfo<class Material, CoreTypeTag::MATERIAL, false>,
     CoreTypeInfo<class Shape, CoreTypeTag::SHAPE, false>,
     CoreTypeInfo<class Light, CoreTypeTag::LIGHT, false>,
     CoreTypeInfo<class Film, CoreTypeTag::FILM, false>,
+    CoreTypeInfo<class Texture, CoreTypeTag::TEXTURE, false>,
     CoreTypeInfo<class Filter, CoreTypeTag::FILTER, false>,
     CoreTypeInfo<class Saver, CoreTypeTag::SAVER, false>,
     CoreTypeInfo<class Task, CoreTypeTag::TASK, false>,
