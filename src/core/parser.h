@@ -53,7 +53,24 @@ private:
         while (_peek() != "}") {
             if constexpr (tag == CoreTypeTag::STRING) {  // special handling for strings
                 auto token = _peek();
-                
+                if (token.front() != '"' || token.back() != '"') {
+                    THROW_PARSER_ERROR(_curr_line, _curr_col, "cannot convert `", token, "` to string literal.");
+                }
+                token = token.substr(1, token.size() - 2);
+                std::string s;
+                for (auto i = 0ul; i < token.size(); i++) {
+                    if (token[i] == '\\') {  // TODO: smarter handling of escape sequences
+                        if (++i >= token.size()) {
+                            THROW_PARSER_ERROR(_curr_line, _curr_col + 1 + i, "bad escape character \"\\\" at the end of the string.");
+                        }
+                        if (token[i] != '"' && token[i] != '\\' && token[i] != '\'') {
+                            THROW_PARSER_ERROR(_curr_line, _curr_col + i, "unsupported escape sequence \"\\", token[i], "\" in string literal.");
+                        }
+                    }
+                    s.push_back(token[i]);
+                }
+                _pop();
+                v.emplace_back(std::move(s));
             } else if constexpr (tag == CoreTypeTag::BOOL) {  // special handling for bools
                 auto token = _peek();
                 if (token == "true") {
