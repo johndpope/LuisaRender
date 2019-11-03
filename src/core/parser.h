@@ -14,6 +14,17 @@
 #include <util/string_manipulation.h>
 
 #include "type_reflection.h"
+#include "device.h"
+#include "camera.h"
+#include "film.h"
+#include "filter.h"
+#include "integrator.h"
+#include "light.h"
+#include "material.h"
+#include "sampler.h"
+#include "saver.h"
+#include "shape.h"
+#include "transform.h"
 #include "task.h"
 
 namespace luisa {
@@ -21,7 +32,8 @@ namespace luisa {
 struct ParserError : std::runtime_error {
     template<typename ...Args>
     ParserError(std::string_view file, size_t line, size_t curr_line, size_t curr_col, Args &&...args) noexcept
-        : std::runtime_error{util::serialize("ParserError (line ", curr_line, ", col ", curr_col, "): ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
+        : std::runtime_error{
+        util::serialize("ParserError (line ", curr_line, ", col ", curr_col, "): ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
 };
 
 #define THROW_PARSER_ERROR(...) throw ParserError{__FILE__, __LINE__, __VA_ARGS__}
@@ -29,6 +41,7 @@ struct ParserError : std::runtime_error {
 class Parser {
 
 private:
+    Device &_device;
     size_t _curr_line{};
     size_t _curr_col{};
     size_t _next_line{};
@@ -36,7 +49,7 @@ private:
     std::string _source;
     std::string_view _peeked;
     std::string_view _remaining;
-    std::unordered_map<std::string_view, CoreTypeVariant> _created;
+    std::unordered_map<std::string_view, std::shared_ptr<CoreTypeBase>> _created;
     
     void _skip_blanks_and_comments();
     [[nodiscard]] std::string_view _peek();
@@ -46,7 +59,7 @@ private:
     [[nodiscard]] bool _finished() const noexcept;
     
     template<CoreTypeTag tag>
-    [[nodiscard]] auto _parse_property_setter_parameter_list_impl() {
+    [[nodiscard]] auto _parse_property_decoder_parameter_list_impl() {
         
         using Type = TypeOfCoreTypeTag<tag>;
         std::vector<Type> v;
@@ -105,13 +118,14 @@ private:
                     _pop();  // @
                     auto element_name = _peek();
                     _pop();  // name
-                    v.emplace_back(std::get<Type>(_created.at(element_name)));
+                    v.emplace_back(std::dynamic_pointer_cast<typename Type::element_type>(_created.at(element_name)));
                 } else {  // inline creation
                     auto element_detail_type = _peek();
                     _pop();  // detail type
                     auto element_parameter_set = _parse_creator_parameter_set(tag, element_detail_type);
-                    auto element_instance = TypeReflectionManager::create_and_decode(tag, element_detail_type, element_parameter_set);
-                    v.emplace_back(std::get<Type>(element_instance));
+                    auto element_instance = TypeReflectionManager::instance().create(tag, element_detail_type);
+                    element_instance->initialize(_device, element_parameter_set);
+                    v.emplace_back(std::dynamic_pointer_cast<typename Type::element_type>(element_instance));
                 }
             }
             if (_peek() != "}") { _match(","); }
@@ -120,22 +134,22 @@ private:
         return v;
     }
     
-    template<CoreTypeTag first_tag, CoreTypeTag ...other_tags>
-    [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(
-        CoreTypeTag tag,
-        std::tuple<WrapCoreTypeTag<first_tag>, WrapCoreTypeTag<other_tags>...>) {
+    template<size_t first_tag, size_t ...other_tags>
+    [[nodiscard]] CoreTypeVectorVariant _parse_property_decoder_parameter_list(CoreTypeTag tag, std::index_sequence<first_tag, other_tags...>) {
         
-        if (tag == first_tag) { return _parse_property_setter_parameter_list_impl<first_tag>(); }
+        constexpr auto first = static_cast<CoreTypeTag>(first_tag);
+        if (tag == first) { return _parse_property_decoder_parameter_list_impl<first>(); }
         if constexpr (sizeof...(other_tags) != 0) {
-            return _parse_property_setter_parameter_list(tag, std::tuple<WrapCoreTypeTag<other_tags>...>{});
+            return _parse_property_decoder_parameter_list(tag, std::index_sequence<other_tags...>{});
         }
         THROW_PARSER_ERROR(_curr_line, _curr_col, "unknown type tag to parse.");
     }
     
-    [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(CoreTypeTag tag);
-    [[nodiscard]] CoreTypeDecoderParameterSet _parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type);
+    [[nodiscard]] CoreTypeVectorVariant _parse_property_decoder_parameter_list(CoreTypeTag tag);
+    [[nodiscard]] CoreTypeInitializerParameterSet _parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type);
 
 public:
+    Parser(Device &device) noexcept : _device{device} {}
     [[nodiscard]] std::vector<std::shared_ptr<Task>> parse(std::filesystem::path file_path);
     
 };

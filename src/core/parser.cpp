@@ -95,7 +95,7 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
     while (!_finished()) {
         if (_peek() == "tasks") {
             _pop();  // tasks
-            tasks = _parse_property_setter_parameter_list_impl<CoreTypeTag::TASK>();
+            tasks = _parse_property_decoder_parameter_list_impl<CoreTypeTag::TASK>();
             if (!_finished()) {
                 THROW_PARSER_ERROR(_curr_line, _curr_col, "tasks should be defined at the end of the file.");
             }
@@ -103,7 +103,7 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
         } else {
             auto type = _peek();
             _pop();  // type
-            auto tag = tag_of_core_type_name(type);
+            auto tag = TypeReflectionManager::instance().base_core_type_tag(type);
             auto name = _peek();
             _pop();  // name
             if (_created.find(name) != _created.end()) {
@@ -113,7 +113,8 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
             auto detail_type = _peek();
             _pop();  // detail type
             auto param_set = _parse_creator_parameter_set(tag, detail_type);
-            auto object = TypeReflectionManager::create_and_decode(tag, detail_type, param_set);
+            auto object = TypeReflectionManager::instance().create(tag, detail_type);
+            object->initialize(_device, param_set);
             _created.emplace(name, object);
         }
     }
@@ -150,8 +151,8 @@ bool Parser::_finished() const noexcept {
     return _peeked.empty() && _remaining.empty();
 }
 
-CoreTypeDecoderParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type) {
-    CoreTypeDecoderParameterSet param_set;
+CoreTypeInitializerParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type) {
+    CoreTypeInitializerParameterSet param_set;
     _match("{");
     auto class_name = TypeReflectionManager::instance().derived_class_name(tag, detail_type);
     while (_peek() != "}") {
@@ -161,14 +162,15 @@ CoreTypeDecoderParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag
         }
         _pop();  // property name
         auto property_tag = TypeReflectionManager::instance().property_tag(class_name, property_name);
-        if (_peek() == "{") {  // setter list
-            param_set.emplace(property_name, _parse_property_setter_parameter_list(property_tag));
+        if (_peek() == "{") {  // decoder list
+            param_set.emplace(property_name, _parse_property_decoder_parameter_list(property_tag));
         } else {  // convenience creation
             _match(":");
             auto property_detail_type = _peek();
             _pop();  // detail type
             auto property_creator_param_set = _parse_creator_parameter_set(property_tag, property_detail_type);
-            auto property_instance = TypeReflectionManager::create_and_decode(property_tag, property_detail_type, property_creator_param_set);
+            auto property_instance = TypeReflectionManager::instance().create(property_tag, property_detail_type);
+            property_instance->initialize(_device, property_creator_param_set);
             param_set.emplace(property_name, core_type_vector_variant_create(property_tag, property_instance));
         }
     }
@@ -176,8 +178,8 @@ CoreTypeDecoderParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag
     return param_set;
 }
 
-CoreTypeVectorVariant Parser::_parse_property_setter_parameter_list(CoreTypeTag tag) {
-    return _parse_property_setter_parameter_list(tag, CoreTypeTagList{});
+CoreTypeVectorVariant Parser::_parse_property_decoder_parameter_list(CoreTypeTag tag) {
+    return _parse_property_decoder_parameter_list(tag, std::make_index_sequence<non_value_core_type_count>{});
 }
 
 }

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "device.h"
+#include "type_reflection.h"
 
 namespace luisa {
 

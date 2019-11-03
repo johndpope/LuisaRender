@@ -12,7 +12,6 @@ DERIVED_CLASS(PathTracing, Integrator) {
     
     CREATOR("Path") {
         auto integrator = std::make_shared<PathTracing>();
-        integrator->_decode(param_set);
         return integrator;
     }
 

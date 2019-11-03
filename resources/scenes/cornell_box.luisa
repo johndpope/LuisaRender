@@ -99,7 +99,6 @@ Task render : SingleShot {
   geometry { @cornell_box }
   lights { @light }
   time { 0.0 }
-  backend : Metal {}
   saver : OpenEXR {
     directory { "output" }
   }
