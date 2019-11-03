@@ -71,16 +71,24 @@ bool TypeReflectionManager::is_core(std::string_view cls) const {
     return iter->second.empty();
 }
 
-CoreTypeVariant TypeReflectionManager::create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param) {
-    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(tag, detail_name, param);
+CoreTypeVariant TypeReflectionManager::create(CoreTypeTag tag, std::string_view detail_name) {
+    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(tag, detail_name);
 }
 
-CoreTypeVariant TypeReflectionManager::create(std::string_view base_type, std::string_view detail_name, const CoreTypeCreatorParameterSet &param) {
-    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(tag_of_core_type_name(base_type), detail_name, param);
+CoreTypeVariant TypeReflectionManager::create(std::string_view base_type, std::string_view detail_name) {
+    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create(tag_of_core_type_name(base_type), detail_name);
 }
 
 std::string_view TypeReflectionManager::derived_class_name(CoreTypeTag tag, std::string_view detail_name) const {
     return _derived_class_name_impl(tag, detail_name, CoreTypeTagList{});
+}
+
+CoreTypeVariant TypeReflectionManager::create_and_decode(CoreTypeTag tag, std::string_view detail_name, const CoreTypeDecoderParameterSet &params) {
+    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create_and_decode(tag, detail_name, params);
+}
+
+CoreTypeVariant TypeReflectionManager::create_and_decode(std::string_view base_type, std::string_view detail_name, const CoreTypeDecoderParameterSet &params) {
+    return _impl::TypeReflectionCreationHelperImpl<CoreTypeTagList>::create_and_decode(tag_of_core_type_name(base_type), detail_name, params);
 }
 
 }

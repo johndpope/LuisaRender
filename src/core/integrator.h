@@ -18,11 +18,6 @@ CORE_CLASS(Integrator) {
         _spp = params[0];
     }
     
-    DECODER {
-        if (!_decode_sampler(param_set)) {}
-        if (!_decode_spp(param_set)) {}
-    };
-    
 };
 
 }

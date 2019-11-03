@@ -2,4 +2,6 @@
 // Created by Mike Smith on 2019/10/18.
 //
 
-#include "accelerator.h"
+#pragma once
+
+#include "pinhole_camera.h"

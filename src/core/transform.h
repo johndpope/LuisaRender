@@ -11,8 +11,6 @@ namespace luisa {
 
 CORE_CLASS(Transform) {
     
-    DECODER {};
-    
 public:
     virtual glm::mat4 at(float time) = 0;
 };

@@ -14,6 +14,8 @@
 #include <exception>
 #include <iostream>
 
+#include <util/noncopyable.h>
+
 #include "core_type.h"
 
 namespace luisa {
@@ -21,19 +23,23 @@ namespace luisa {
 struct TypeReflectionError : public std::runtime_error {
     template<typename ...Args>
     TypeReflectionError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{serialize("TypeReflectionError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
+        : std::runtime_error{util::serialize("TypeReflectionError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
 };
 
 #define THROW_TYPE_REFLECTION_ERROR(...)  throw TypeReflectionError{__FILE__, __LINE__, __VA_ARGS__}
 
-struct Empty {  // convenience base type for core types
-    virtual ~Empty() noexcept = default;
+using CoreTypeDecoderParameterSet = std::unordered_map<std::string_view, CoreTypeVectorVariant>;
+
+struct CoreTypeBase : util::Noncopyable {  // convenience base type for core types
+    virtual ~CoreTypeBase() noexcept = default;
+    virtual void decode(const CoreTypeDecoderParameterSet &param_set [[maybe_unused]]) = 0;
 };
 
-using CoreTypeCreatorParameterSet = std::unordered_map<std::string_view, CoreTypeVectorVariant>;
+template<CoreTypeTag tag>
+using CoreTypeCreator = std::function<TypeOfCoreTypeTag<tag>()>;
 
 template<CoreTypeTag tag>
-using CoreTypeCreator = std::function<TypeOfCoreTypeTag<tag>(const CoreTypeCreatorParameterSet &)>;
+using CoreTypeDecodingCreator = std::function<TypeOfCoreTypeTag<tag>(const CoreTypeDecoderParameterSet &)>;
 
 namespace _impl {
 
@@ -41,7 +47,7 @@ template<typename T>
 struct TypeReflectionInfoImpl {};
 
 template<>
-struct TypeReflectionInfoImpl<Empty> {
+struct TypeReflectionInfoImpl<CoreTypeBase> {
     static constexpr std::string_view name{};
 };
 
@@ -53,6 +59,9 @@ struct TypeReflectionRegistrationHelperImpl {
     template<CoreTypeTag tag>
     static void register_creator(std::string_view name, CoreTypeCreator<tag> ctor) noexcept;
     
+    template<CoreTypeTag tag>
+    static void register_decoding_creator(std::string_view name, CoreTypeDecodingCreator<tag> ctor) noexcept;
+    
 };
 
 }
@@ -63,11 +72,15 @@ template<CoreTypeTag tag>
 using MapCoreTypeTagToCreatorListImpl = std::unordered_map<std::string_view, CoreTypeCreator<tag>>;
 
 template<CoreTypeTag tag>
+using MapCoreTypeTagToDecodingCreatorListImpl = std::unordered_map<std::string_view, CoreTypeDecodingCreator<tag>>;
+
+template<CoreTypeTag tag>
 using MapCoreTypeTagToDerivedTypeClassNameListImpl = std::unordered_map<std::string_view, std::string_view>;
 
 }
 
 using CoreTypeCreatorList = MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToCreatorListImpl>;
+using CoreTypeDecodingCreatorList = MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToDecodingCreatorListImpl>;
 using DerivedTypeClassNameList = MapCoreTypeInfoListByTag<_impl::MapCoreTypeTagToDerivedTypeClassNameListImpl>;
 
 class TypeReflectionManager {
@@ -81,6 +94,7 @@ private:
     std::unordered_map<std::string_view, PropertyList> _properties;
     PropertyList *_curr = nullptr;
     CoreTypeCreatorList _creators;
+    CoreTypeDecodingCreatorList _decoding_creators;
     DerivedTypeClassNameList _derived_classes;
     
     friend _impl::TypeReflectionRegistrationHelperImpl;
@@ -112,8 +126,10 @@ public:
     [[nodiscard]] const std::vector<std::string_view> &classes() const noexcept;
     [[nodiscard]] bool is_core(std::string_view cls) const;
     [[nodiscard]] CoreTypeTag property_tag(std::string_view cls, std::string_view prop) const;
-    [[nodiscard]] CoreTypeVariant create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param);
-    [[nodiscard]] CoreTypeVariant create(std::string_view base_type, std::string_view detail_name, const CoreTypeCreatorParameterSet &param);
+    [[nodiscard]] static CoreTypeVariant create(CoreTypeTag tag, std::string_view detail_name);
+    [[nodiscard]] static CoreTypeVariant create(std::string_view base_type, std::string_view detail_name);
+    [[nodiscard]] static CoreTypeVariant create_and_decode(CoreTypeTag tag, std::string_view detail_name, const CoreTypeDecoderParameterSet &params);
+    [[nodiscard]] static CoreTypeVariant create_and_decode(std::string_view base_type, std::string_view detail_name, const CoreTypeDecoderParameterSet &params);
     [[nodiscard]] std::string_view derived_class_name(CoreTypeTag tag, std::string_view detail_name) const;
     
     template<typename T>
@@ -137,13 +153,25 @@ public:
     }
     
     template<CoreTypeTag tag>
-    [[nodiscard]] auto create(std::string_view detail_name, const CoreTypeCreatorParameterSet &param) {
+    [[nodiscard]] auto create(std::string_view detail_name) {
         auto &&ctors = std::get<index_of_core_type_tag<tag>>(_creators);
         auto iter = ctors.find(detail_name);
         if (iter == ctors.end()) {
             THROW_TYPE_REFLECTION_ERROR("creator not registered for class ", name_of_core_type_tag(tag), "::", detail_name, ".");
         }
-        return iter->second(param);
+        return iter->second();
+    }
+    
+    template<CoreTypeTag tag>
+    [[nodiscard]] auto create_and_decode(std::string_view detail_name, const CoreTypeDecoderParameterSet &params) {
+        auto &&ctors = std::get<index_of_core_type_tag<tag>>(_creators);
+        auto iter = ctors.find(detail_name);
+        if (iter == ctors.end()) {
+            THROW_TYPE_REFLECTION_ERROR("creator not registered for class ", name_of_core_type_tag(tag), "::", detail_name, ".");
+        }
+        auto instance = iter->second();
+        std::dynamic_pointer_cast<CoreTypeBase>(instance)->decode(params);
+        return instance;
     }
     
     template<CoreTypeTag tag>
@@ -161,15 +189,33 @@ namespace _impl {
 
 template<typename Tuple>
 struct TypeReflectionCreationHelperImpl {
-    static CoreTypeVariant create(CoreTypeTag, std::string_view, const CoreTypeCreatorParameterSet &) { return {}; }
+    static CoreTypeVariant create(CoreTypeTag, std::string_view detail_name) {
+        THROW_TYPE_REFLECTION_ERROR("failed to create instance for detail type \"", detail_name, "\".");
+    }
+    static CoreTypeVariant create_and_decode(CoreTypeTag, std::string_view detail_name, const CoreTypeDecoderParameterSet &) {
+        THROW_TYPE_REFLECTION_ERROR("failed to create instance for detail type \"", detail_name, "\".");
+    }
 };
 
 template<typename First, typename ...Others>
 struct TypeReflectionCreationHelperImpl<std::tuple<First, Others...>> {
-    static auto create(CoreTypeTag tag, std::string_view detail_name, const CoreTypeCreatorParameterSet &param) -> CoreTypeVariant {
-        return tag == First::tag ?
-               TypeReflectionManager::instance().create<First::tag>(detail_name, param) :
-               TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create(tag, detail_name, param);
+    static auto create(CoreTypeTag tag, std::string_view detail_name) -> CoreTypeVariant {
+        if constexpr (!is_core_type_tag_value_type<First::tag>) {
+            return tag == First::tag ?
+                   TypeReflectionManager::instance().create<First::tag>(detail_name) :
+                   TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create(tag, detail_name);
+        } else {
+            return TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create(tag, detail_name);
+        }
+    }
+    static auto create_and_decode(CoreTypeTag tag, std::string_view detail_name, const CoreTypeDecoderParameterSet &params) -> CoreTypeVariant {
+        if constexpr (!is_core_type_tag_value_type<First::tag>) {
+            return tag == First::tag ?
+                   TypeReflectionManager::instance().create_and_decode<First::tag>(detail_name, params) :
+                   TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create_and_decode(tag, detail_name, params);
+        } else {
+            return TypeReflectionCreationHelperImpl<std::tuple<Others...>>::create_and_decode(tag, detail_name, params);
+        }
     }
 };
 
@@ -217,19 +263,19 @@ struct WrapBaseTag {
           public virtual WrapBaseTag<_impl::TypeReflectionInfoImpl<Cls>::base_tag>
 
 #define CORE_CLASS(Cls)  \
-    DERIVED_CLASS(Cls, Empty)
+    DERIVED_CLASS(Cls, CoreTypeBase)
 
 #define PROPERTY(Type, name, tag)                                                                           \
         static_assert(true);                                                                                \
     private:                                                                                                \
         inline static struct _refl_##name##_helper {                                                        \
             _refl_##name##_helper() noexcept {                                                              \
-                _impl::TypeReflectionRegistrationHelperImpl::register_property(#name, tag);                 \
+                ::luisa::_impl::TypeReflectionRegistrationHelperImpl::register_property(#name, tag);        \
             }                                                                                               \
         } _refl_##name{};                                                                                   \
     protected:                                                                                              \
         Type _##name{};                                                                                     \
-        bool _decode_##name(const CoreTypeCreatorParameterSet &param_set) {                                 \
+        bool _decode_##name(const CoreTypeDecoderParameterSet &param_set) {                                 \
             if (auto iter = param_set.find(#name); iter != param_set.end()) {                               \
                 _decode_##name##_impl(std::get<std::vector<TypeOfCoreTypeTag<tag>>>(param_set.at(#name)));  \
                 return true;                                                                                \
@@ -239,20 +285,19 @@ struct WrapBaseTag {
     private:                                                                                                \
         virtual void _decode_##name##_impl(const std::vector<TypeOfCoreTypeTag<tag>> &params)
 
-#define CREATOR(detail_name)                                                                                                    \
-        static_assert(true);                                                                                                    \
-    private:                                                                                                                    \
-        inline static struct _refl_ctor_helper {                                                                                \
-            _refl_ctor_helper() noexcept {                                                                                      \
-                _impl::TypeReflectionRegistrationHelperImpl::register_creator<base_tag>(detail_name, [] (auto &param) {         \
-                    return create(param);                                                                                       \
-                });                                                                                                             \
-            }                                                                                                                   \
-        } _refl_ctor{};                                                                                                         \
-    public:                                                                                                                     \
-        [[nodiscard]] static TypeOfCoreTypeTag<base_tag> create(const CoreTypeCreatorParameterSet &param_set [[maybe_unused]])
-
-#define DECODER                                                                              \
-        static_assert(true);                                                                 \
-    protected:                                                                               \
-        virtual void _decode(const CoreTypeCreatorParameterSet &param_set [[maybe_unused]])
+#define CREATOR(detail_name)                                                                                                                                          \
+        static_assert(true);                                                                                                                                          \
+    private:                                                                                                                                                          \
+        inline static struct _refl_ctor_helper {                                                                                                                      \
+            _refl_ctor_helper() noexcept {                                                                                                                            \
+                ::luisa::_impl::TypeReflectionRegistrationHelperImpl::register_creator<base_tag>(detail_name, create);                                                \
+                ::luisa::_impl::TypeReflectionRegistrationHelperImpl::register_decoding_creator<base_tag>(detail_name, [&] (const CoreTypeDecoderParameterSet &ps) {  \
+                    auto instance = create();                                                                                                                         \
+                    instance->decode(ps);                                                                                                                             \
+                    return instance;                                                                                                                                  \
+                });                                                                                                                                                   \
+            }                                                                                                                                                         \
+        } _refl_ctor{};                                                                                                                                               \
+    public:                                                                                                                                                           \
+        [[nodiscard]] static TypeOfCoreTypeTag<base_tag> create()
+        

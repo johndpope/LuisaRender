@@ -9,21 +9,21 @@
 #include <string_view>
 #include <exception>
 
-#include "string_manipulation.h"
+#include <util/string_manipulation.h>
 
 namespace luisa {
 
 struct CoreTypeError : std::runtime_error {
     template<typename ...Args>
     CoreTypeError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{serialize("CoreTypeError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
+        : std::runtime_error{util::serialize("CoreTypeError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
 };
 
 #define THROW_CORE_TYPE_ERROR(...) throw CoreTypeError{__FILE__, __LINE__, __VA_ARGS__}
 
 enum struct CoreTypeTag : uint32_t {
-    CAMERA, SAMPLER, INTEGRATOR, ACCELERATOR, TRANSFORM, MATERIAL, SHAPE, LIGHT, FILM, TEXTURE, FILTER, SAVER, TASK,
-    STRING, BOOL, FLOAT, INTEGER,
+    CAMERA, SAMPLER, INTEGRATOR, TRANSFORM, MATERIAL, SHAPE, LIGHT, FILM, FILTER, SAVER, TASK, DEVICE,
+    STRING, BOOL, FLOAT, INTEGER,  // value types should go after other types
     UNKNOWN,
 };
 
@@ -35,8 +35,6 @@ constexpr std::string_view name_of_core_type_tag(CoreTypeTag t) noexcept {
             return "Sampler";
         case CoreTypeTag::INTEGRATOR:
             return "Integrator";
-        case CoreTypeTag::ACCELERATOR:
-            return "Accelerator";
         case CoreTypeTag::TRANSFORM:
             return "Transform";
         case CoreTypeTag::MATERIAL:
@@ -47,14 +45,14 @@ constexpr std::string_view name_of_core_type_tag(CoreTypeTag t) noexcept {
             return "Light";
         case CoreTypeTag::FILM:
             return "Film";
-        case CoreTypeTag::TEXTURE:
-            return "Texture";
         case CoreTypeTag::FILTER:
             return "Filter";
         case CoreTypeTag::SAVER:
             return "Saver";
         case CoreTypeTag::TASK:
             return "Task";
+        case CoreTypeTag::DEVICE:
+            return "Device";
         case CoreTypeTag::STRING:
             return "String";
         case CoreTypeTag::BOOL:
@@ -80,16 +78,15 @@ using CoreTypeInfoList = std::tuple<
     CoreTypeInfo<class Camera, CoreTypeTag::CAMERA, false>,
     CoreTypeInfo<class Sampler, CoreTypeTag::SAMPLER, false>,
     CoreTypeInfo<class Integrator, CoreTypeTag::INTEGRATOR, false>,
-    CoreTypeInfo<class Accelerator, CoreTypeTag::ACCELERATOR, false>,
     CoreTypeInfo<class Transform, CoreTypeTag::TRANSFORM, false>,
     CoreTypeInfo<class Material, CoreTypeTag::MATERIAL, false>,
     CoreTypeInfo<class Shape, CoreTypeTag::SHAPE, false>,
     CoreTypeInfo<class Light, CoreTypeTag::LIGHT, false>,
     CoreTypeInfo<class Film, CoreTypeTag::FILM, false>,
-    CoreTypeInfo<class Texture, CoreTypeTag::TEXTURE, false>,
     CoreTypeInfo<class Filter, CoreTypeTag::FILTER, false>,
     CoreTypeInfo<class Saver, CoreTypeTag::SAVER, false>,
     CoreTypeInfo<class Task, CoreTypeTag::TASK, false>,
+    CoreTypeInfo<class Device, CoreTypeTag::DEVICE, false>,
     CoreTypeInfo<std::string, CoreTypeTag::STRING, true>,
     CoreTypeInfo<bool, CoreTypeTag::BOOL, true>,
     CoreTypeInfo<float, CoreTypeTag::FLOAT, true>,
@@ -135,7 +132,7 @@ struct InfoOfCoreTypeTagImpl<std::tuple<CoreTypeInfo<FirstType, first_tag, first
 
 }
 
-constexpr auto core_type_count = _impl::CoreTypeCountImpl<CoreTypeInfoList>::value;
+constexpr auto core_type_count [[maybe_unused]] = _impl::CoreTypeCountImpl<CoreTypeInfoList>::value;
 
 template<CoreTypeTag tag>
 constexpr auto index_of_core_type_tag = _impl::IndexOfCoreTypeTagImpl<CoreTypeInfoList, tag>::value;
@@ -178,13 +175,13 @@ struct TagOfCoreTypeImpl<std::tuple<CoreTypeInfo<FirstType, first_tag, first_is_
 }
 
 template<typename type>
-constexpr auto tag_of_core_type = _impl::TagOfCoreTypeImpl<CoreTypeInfoList, type>::value;
+constexpr auto tag_of_core_type [[maybe_unused]] = _impl::TagOfCoreTypeImpl<CoreTypeInfoList, type>::value;
 
 template<typename type>
-constexpr auto name_of_core_type = name_of_core_type_tag(tag_of_core_type<type>);
+constexpr auto name_of_core_type [[maybe_unused]] = name_of_core_type_tag(tag_of_core_type<type>);
 
 template<typename type>
-constexpr auto is_core_type = (tag_of_core_type<type> != CoreTypeTag::UNKNOWN);
+constexpr auto is_core_type [[maybe_unused]] = (tag_of_core_type<type> != CoreTypeTag::UNKNOWN);
 
 namespace _impl {
 
@@ -204,7 +201,7 @@ struct BaseTagOfDerivedType<std::tuple<CoreTypeInfo<FirstType, first_tag, first_
 }
 
 template<typename T>
-constexpr auto base_tag_of_derived_type = _impl::BaseTagOfDerivedType<CoreTypeInfoList, T>::value;
+constexpr auto base_tag_of_derived_type [[maybe_unused]] = _impl::BaseTagOfDerivedType<CoreTypeInfoList, T>::value;
 
 namespace _impl {
 
@@ -298,7 +295,7 @@ constexpr auto is_core_type_name(std::string_view name) noexcept {
 }
 
 template<CoreTypeTag tag>
-constexpr auto is_core_type_tag_value_type = InfoOfCoreTypeTag<tag>::is_value;
+constexpr auto is_core_type_tag_value_type [[maybe_unused]] = InfoOfCoreTypeTag<tag>::is_value;
 
 namespace _impl {
 

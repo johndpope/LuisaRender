@@ -1,0 +1,108 @@
+Film film : RGB {
+  size { 1000, 800 }
+  filter : MitchellNetravali {
+    radius { 1.5 }
+  }
+}
+
+Camera camera : Pinhole {
+  fov { 42.5 }
+  position { 0.0, 0.0, 15.0 }
+  look_at { 0.0, 0.0, 14.0 }
+  up { 0.0, 1.0, 0.0 }
+  film { @film }
+}
+
+Light light : Point {
+  position { 0.0, 4.0, 0.0 }
+  emission { 10.0, 10.0, 10.0 }
+}
+
+Shape nanosuit : WavefrontOBJ {
+  file { "../meshes/nanosuit/nanosuit.obj" }
+  transform : Static {
+    scaling { 0.5, 0.5, 0.5 }
+    rotation { 0.0, 1.0, 0.0, 30.0 }
+    translation { 0.0, -5.0, -1.0 }
+  }
+  material : Mirror {}
+}
+
+Shape cube : WavefrontObj {
+  file { "../meshes/cube/cube.obj" }
+  transform : Static {
+    scaling { 10.1, 10.1, 10.1 }
+  }
+}
+
+Shape left_wall : Replica {
+  shape { @cube }
+  material : Matte {
+    albedo { 1.0, 0.0, 0.0 }
+  }
+  transform : Static {
+    translation { -10.0, 0.0, 0.0 }
+  }
+}
+
+Shape right_wall : Replica {
+  shape { @cube }
+  material : Matte {
+    albedo { 0.0, 1.0, 0.0 }
+  }
+  transform : Static {
+    translation { 10.0 0.0 0.0 }
+  }
+}
+
+Material white : Matte {
+  albedo { 1.0, 1.0, 1.0 }
+}
+
+Shape ceiling : Replica {
+  shape { @cube }
+  material { @white }
+  transform : Static {
+    translation { 0.0, 10.0, 0.0 }
+  }
+}
+
+Shape back_wall : Replica {
+  shape { @cube }
+  material { @white }
+  transform : Static {
+    translation { 0.0, 0.0, -10.0 }
+  }
+}
+
+Shape floor : Replica {
+  shape { @cube }
+  material { @white }
+  transform : Static {
+    translation { 0.0, -10.0, 0.0 }
+  }
+}
+
+Shape cornell_box : Group {
+  meshes { @nanosuit, @left_wall, @right_wall, @ceiling, @back_wall, @floor }
+}
+
+Integrator integrator : PathTracing {
+  sampler : Halton {}
+  spp { 4096 }
+  max_depth { 31 }
+}
+
+Task render : SingleShot {
+  camera { @camera }
+  integrator { @integrator }
+  geometry { @cornell_box }
+  lights { @light }
+  time { 0.0 }
+  backend : Metal {}
+  saver : OpenEXR {
+    directory { "output" }
+  }
+}
+
+tasks { @render }

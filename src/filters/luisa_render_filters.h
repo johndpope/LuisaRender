@@ -4,4 +4,4 @@
 
 #pragma once
 
-#include "integrators/path_tracing.h"
+#include "mitchell_netravali_filter.h"

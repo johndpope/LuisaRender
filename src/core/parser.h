@@ -11,8 +11,9 @@
 #include <iostream>
 #include <charconv>
 
+#include <util/string_manipulation.h>
+
 #include "type_reflection.h"
-#include "string_manipulation.h"
 #include "task.h"
 
 namespace luisa {
@@ -20,7 +21,7 @@ namespace luisa {
 struct ParserError : std::runtime_error {
     template<typename ...Args>
     ParserError(std::string_view file, size_t line, size_t curr_line, size_t curr_col, Args &&...args) noexcept
-        : std::runtime_error{serialize("ParserError (line ", curr_line, ", col ", curr_col, "): ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
+        : std::runtime_error{util::serialize("ParserError (line ", curr_line, ", col ", curr_col, "): ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
 };
 
 #define THROW_PARSER_ERROR(...) throw ParserError{__FILE__, __LINE__, __VA_ARGS__}
@@ -109,7 +110,7 @@ private:
                     auto element_detail_type = _peek();
                     _pop();  // detail type
                     auto element_parameter_set = _parse_creator_parameter_set(tag, element_detail_type);
-                    auto element_instance = TypeReflectionManager::instance().create(tag, element_detail_type, element_parameter_set);
+                    auto element_instance = TypeReflectionManager::create_and_decode(tag, element_detail_type, element_parameter_set);
                     v.emplace_back(std::get<Type>(element_instance));
                 }
             }
@@ -132,7 +133,7 @@ private:
     }
     
     [[nodiscard]] CoreTypeVectorVariant _parse_property_setter_parameter_list(CoreTypeTag tag);
-    [[nodiscard]] CoreTypeCreatorParameterSet _parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type);
+    [[nodiscard]] CoreTypeDecoderParameterSet _parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type);
 
 public:
     [[nodiscard]] std::vector<std::shared_ptr<Task>> parse(std::filesystem::path file_path);

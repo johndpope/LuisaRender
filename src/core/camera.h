@@ -1,34 +1,26 @@
-
 //
-// Created by Mike Smith on 2019/10/4.
+// Created by Mike Smith on 2019/10/20.
 //
 
 #pragma once
 
-#include <string>
-#include <iostream>
-
-#include <glm/glm.hpp>
-
-#include "type_reflection.h"
+#include "film.h"
 
 namespace luisa {
 
 CORE_CLASS(Camera) {
+
+protected:
+    PROPERTY(std::shared_ptr<Film>, film, CoreTypeTag::FILM) { _film = params[0]; }
+
+public:
+    [[nodiscard]] virtual size_t random_number_dimensions() const noexcept = 0;
+    virtual void initialize(Device &device) = 0;
+    virtual void generate_rays(KernelDispatcher &dispatch, Texture &random_texture, Buffer &ray_buffer, math::uint2 frame_size, float time) = 0;
     
-    PROPERTY(std::shared_ptr<Film>, film, CoreTypeTag::FILM) {
-        _film = params[0];
+    void generate_rays(KernelDispatcher &dispatch, Texture &random_texture, Buffer &ray_buffer, math::uint2 frame_size) {
+        generate_rays(dispatch, random_texture, ray_buffer, frame_size, 0.0f);
     }
-    
-    PROPERTY(std::shared_ptr<Transform>, transform, CoreTypeTag::TRANSFORM) {
-        _transform = params[0];
-    }
-    
-    DECODER {
-        if (!_decode_film(param_set)) {}
-        if (!_decode_transform(param_set)) {}
-    };
-    
 };
 
 }

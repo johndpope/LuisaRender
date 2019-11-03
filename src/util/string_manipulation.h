@@ -7,7 +7,7 @@
 #include <string>
 #include <sstream>
 
-namespace luisa {
+namespace luisa::util {
 
 template<typename ...Args>
 std::string serialize(Args &&...args) noexcept {

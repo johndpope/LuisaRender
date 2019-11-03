@@ -2,4 +2,6 @@
 // Created by Mike Smith on 2019/10/18.
 //
 
-#include "perspective_camera.h"
+#pragma once
+
+#include "halton_sampler.h"

@@ -113,7 +113,7 @@ std::vector<std::shared_ptr<Task>> Parser::_parse_top_level() {
             auto detail_type = _peek();
             _pop();  // detail type
             auto param_set = _parse_creator_parameter_set(tag, detail_type);
-            auto object = TypeReflectionManager::instance().create(tag, detail_type, param_set);
+            auto object = TypeReflectionManager::create_and_decode(tag, detail_type, param_set);
             _created.emplace(name, object);
         }
     }
@@ -150,8 +150,8 @@ bool Parser::_finished() const noexcept {
     return _peeked.empty() && _remaining.empty();
 }
 
-CoreTypeCreatorParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type) {
-    CoreTypeCreatorParameterSet param_set;
+CoreTypeDecoderParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag, std::string_view detail_type) {
+    CoreTypeDecoderParameterSet param_set;
     _match("{");
     auto class_name = TypeReflectionManager::instance().derived_class_name(tag, detail_type);
     while (_peek() != "}") {
@@ -168,7 +168,7 @@ CoreTypeCreatorParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag tag
             auto property_detail_type = _peek();
             _pop();  // detail type
             auto property_creator_param_set = _parse_creator_parameter_set(property_tag, property_detail_type);
-            auto property_instance = TypeReflectionManager::instance().create(property_tag, property_detail_type, property_creator_param_set);
+            auto property_instance = TypeReflectionManager::create_and_decode(property_tag, property_detail_type, property_creator_param_set);
             param_set.emplace(property_name, core_type_vector_variant_create(property_tag, property_instance));
         }
     }
