@@ -48,7 +48,6 @@ private:
     std::vector<Info> _info_list;
     std::unordered_map<std::string_view, int32_t> _class_ids;
     std::array<std::unordered_map<std::string_view, std::pair<std::string_view, Creator>>, non_value_core_type_count> _creators{};
-    CoreTypeTag _curr_base_tag;
     TypeReflectionManager() = default;
 
 public:

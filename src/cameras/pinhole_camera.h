@@ -9,6 +9,8 @@
 namespace luisa {
 
 DERIVED_CLASS(PinholeCamera, Camera) {
+
+protected:
     
     PROPERTY(float, fov, CoreTypeTag::FLOAT) {
         _fov = params[0];
@@ -22,7 +24,7 @@ DERIVED_CLASS(PinholeCamera, Camera) {
         _focal_distance = params[0];
     }
     
-//    CREATOR("Pinhole") { return std::make_shared<PinholeCamera>(); }
+public:
     
     size_t random_number_dimensions() const noexcept override {
         return 2;
@@ -34,6 +36,14 @@ DERIVED_CLASS(PinholeCamera, Camera) {
     
     void generate_rays(KernelDispatcher &dispatch, Texture &random_texture, Buffer &ray_buffer, math::uint2 frame_size, float time) override {
     
+    }
+    
+    void initialize(Device &device, const CoreTypeInitializerParameterSet &param_set) override {
+    
+    }
+    
+    CREATOR("Pinhole") {
+        return std::make_shared<PinholeCamera>();
     }
     
 };

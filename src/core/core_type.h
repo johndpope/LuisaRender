@@ -162,7 +162,7 @@ struct TagOfNonValueCoreTypeImpl<T, CoreTypeTag::NON_VALUE_TYPE_COUNT> {
 template<size_t ...tags>
 [[nodiscard]] constexpr std::string_view name_of_non_value_core_type_tag(CoreTypeTag tag, std::index_sequence<tags...>) noexcept {
     constexpr std::string_view names[]{InfoOfCoreTypeTag<static_cast<CoreTypeTag>(tags)>::name...};
-    return names[static_cast<uint32_t>(tag)];
+    return static_cast<uint32_t>(tag) < non_value_core_type_count ? names[static_cast<uint32_t>(tag)] : "Unknown";
 }
 
 }
@@ -190,7 +190,13 @@ constexpr auto tag_of_non_value_core_type = _impl::TagOfNonValueCoreTypeImpl<T>:
 }
 
 [[nodiscard]] constexpr std::string_view name_of_core_type_tag(CoreTypeTag tag) noexcept {
-    return static_cast<uint32_t>(tag) < non_value_core_type_count ? name_of_non_value_core_type_tag(tag) : name_of_value_core_type_tag(tag);
+    auto index = static_cast<uint32_t>(tag);
+    if (index < non_value_core_type_count) {
+        return name_of_non_value_core_type_tag(tag);
+    } else if (index > non_value_core_type_count && index < all_core_type_count) {
+        return name_of_value_core_type_tag(tag);
+    }
+    return "Unknown";
 }
 
 }

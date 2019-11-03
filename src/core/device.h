@@ -37,8 +37,8 @@ private:
     inline static std::unordered_map<std::string_view, DeviceCreator> _device_creators{};
 
 protected:
-    static void _register_creator(std::string_view name, DeviceCreator creator) {
-        assert(_device_creators.find(name) != _device_creators.end());
+    static void _register_creator(std::string_view name, DeviceCreator creator) noexcept {
+        assert(_device_creators.find(name) == _device_creators.end());
         _device_creators[name] = std::move(creator);
     }
 
