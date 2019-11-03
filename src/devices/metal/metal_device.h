@@ -9,19 +9,16 @@
 
 namespace luisa::metal {
 
-DERIVED_CLASS(MetalDevice, Device) {
+class MetalDevice : public Device {
 
 private:
     std::unique_ptr<struct MetalDeviceWrapper> _device_wrapper;
     std::unique_ptr<struct MetalLibraryWrapper> _library_wrapper;
     std::unique_ptr<struct MetalCommandQueueWrapper> _command_queue_wrapper;
     
-    MetalDevice();
-
 public:
-    CREATOR("Metal") {
-        return std::make_shared<MetalDevice>();
-    }
+    MetalDevice();
+    DEVICE_CREATOR("Metal");
     
     std::shared_ptr<Kernel> create_kernel(std::string_view function_name) override;
     std::shared_ptr<Texture> create_texture(math::uint2 size, TextureFormatTag format_tag, TextureAccessTag access_tag) override;

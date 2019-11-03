@@ -141,4 +141,8 @@ std::shared_ptr<Texture> MetalDevice::create_texture(math::uint2 size, TextureFo
     return std::make_shared<MetalTexture>(texture, size, format_tag, access_tag);
 }
 
+[[nodiscard]] std::shared_ptr<Device> MetalDevice::create() {
+    return std::make_shared<MetalDevice>();
+}
+
 }

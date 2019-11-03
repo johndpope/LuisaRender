@@ -30,16 +30,21 @@ struct DeviceError : public std::runtime_error {
 
 class Device : util::Noncopyable {
 
+public:
+    using DeviceCreator = std::function<std::shared_ptr<Device>()>;
+
 private:
-    inline static std::unordered_map<std::string_view, std::function<std::unique_ptr<Device>()>> _device_creators{};
+    inline static std::unordered_map<std::string_view, DeviceCreator> _device_creators{};
 
 protected:
-    static void _register_creator(std::string_view name, std::function<std::unique_ptr<Device>()> creator) {
+    static void _register_creator(std::string_view name, DeviceCreator creator) {
         assert(_device_creators.find(name) != _device_creators.end());
         _device_creators[name] = std::move(creator);
     }
 
 public:
+    ~Device() noexcept = default;
+    
     [[nodiscard]] static std::shared_ptr<Device> create(std::string_view name) {
         auto iter = _device_creators.find(name);
         if (iter == _device_creators.end()) {

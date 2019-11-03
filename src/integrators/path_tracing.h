@@ -10,10 +10,10 @@ namespace luisa {
 
 DERIVED_CLASS(PathTracing, Integrator) {
     
-    CREATOR("Path") {
-        auto integrator = std::make_shared<PathTracing>();
-        return integrator;
-    }
+//    CREATOR("Path") {
+//        auto integrator = std::make_shared<PathTracing>();
+//        return integrator;
+//    }
 
 };
 

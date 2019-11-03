@@ -4,9 +4,9 @@
 int main() {
     
     using namespace luisa;
+    TypeReflectionManager::instance().print();
     
-    Parser parser;
-    auto tasks = parser.parse("resources/scenes/test.scene");
+    auto device = Device::create("Metal");
     
     return 0;
 }

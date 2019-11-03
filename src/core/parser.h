@@ -14,6 +14,7 @@
 #include <util/string_manipulation.h>
 
 #include "type_reflection.h"
+
 #include "device.h"
 #include "camera.h"
 #include "film.h"
@@ -37,6 +38,30 @@ struct ParserError : std::runtime_error {
 };
 
 #define THROW_PARSER_ERROR(...) throw ParserError{__FILE__, __LINE__, __VA_ARGS__}
+
+namespace _impl {
+
+template<size_t first_tag, size_t ...other_tags>
+[[nodiscard]] inline CoreTypeVectorVariant non_value_core_type_vector_variant_create_impl(
+    CoreTypeTag tag, std::shared_ptr<CoreTypeBase> elem,
+    std::index_sequence<first_tag, other_tags...>) {
+    
+    constexpr auto first = static_cast<CoreTypeTag>(first_tag);
+    
+    if (tag == first) {
+        return std::vector<TypeOfCoreTypeTag<first>>{std::dynamic_pointer_cast<typename TypeOfCoreTypeTag<first>::element_type>(elem)};
+    }
+    if constexpr (sizeof...(other_tags) != 0) {
+        return non_value_core_type_vector_variant_create_impl(tag, std::move(elem), std::index_sequence<other_tags...>{});
+    }
+    THROW_CORE_TYPE_ERROR("unknown core type tag.");
+}
+
+}
+
+[[nodiscard]] inline CoreTypeVectorVariant non_value_core_type_vector_variant_create(CoreTypeTag tag, std::shared_ptr<CoreTypeBase> elem) {
+    return _impl::non_value_core_type_vector_variant_create_impl(tag, std::move(elem), std::make_index_sequence<non_value_core_type_count>{});
+}
 
 class Parser {
 

@@ -54,8 +54,7 @@ private:
 public:
     TypeReflectionManager(TypeReflectionManager &&) = delete;
     TypeReflectionManager &operator=(TypeReflectionManager &&) = delete;
-
-public:
+    
     [[nodiscard]] static TypeReflectionManager &instance() noexcept {
         static TypeReflectionManager manager;
         return manager;
@@ -125,6 +124,23 @@ public:
         }
         return iter->second.second();
     }
+    
+    void print() {
+        for (auto &&item : _class_ids) {
+            std::cout << item.first << " [id = " << item.second << "]\n";
+            auto &&info = _info_list[item.second];
+            std::cout << "  base_tag = " << name_of_core_type_tag(info.base_tag) << "\n";
+            std::cout << "  parent_id = " << info.parent_index << "\n";
+            if (info.parent_index != -1) {
+                std::cout << "  parent_name = " << _info_list[info.parent_index].class_name << "\n";
+            }
+            for (auto &&prop_item : info.properties) {
+                std::cout << "  property [name = " << prop_item.first << "]: " << name_of_core_type_tag(prop_item.second) << "\n";
+            }
+            std::cout << std::endl;
+        }
+    }
+    
 };
 
 namespace _impl {

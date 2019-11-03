@@ -48,6 +48,7 @@ enum struct CoreTypeTag : uint32_t {
 };
 
 constexpr auto non_value_core_type_count = static_cast<size_t>(CoreTypeTag::NON_VALUE_TYPE_COUNT);
+constexpr auto all_core_type_count = static_cast<size_t>(CoreTypeTag::ALL_TYPE_COUNT);
 
 template<CoreTypeTag tag>
 struct InfoOfCoreTypeTag {};
@@ -171,6 +172,25 @@ constexpr auto tag_of_non_value_core_type = _impl::TagOfNonValueCoreTypeImpl<T>:
 
 [[nodiscard]] constexpr std::string_view name_of_non_value_core_type_tag(CoreTypeTag tag) noexcept {
     return _impl::name_of_non_value_core_type_tag(tag, std::make_index_sequence<non_value_core_type_count>{});
+}
+
+[[nodiscard]] constexpr std::string_view name_of_value_core_type_tag(CoreTypeTag tag) noexcept {
+    switch (tag) {
+        case CoreTypeTag::STRING:
+            return "String";
+        case CoreTypeTag::BOOL:
+            return "Bool";
+        case CoreTypeTag::FLOAT:
+            return "Float";
+        case CoreTypeTag::INTEGER:
+            return "Integer";
+        default:
+            return "Unknown";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view name_of_core_type_tag(CoreTypeTag tag) noexcept {
+    return static_cast<uint32_t>(tag) < non_value_core_type_count ? name_of_non_value_core_type_tag(tag) : name_of_value_core_type_tag(tag);
 }
 
 }

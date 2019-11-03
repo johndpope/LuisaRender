@@ -171,7 +171,7 @@ CoreTypeInitializerParameterSet Parser::_parse_creator_parameter_set(CoreTypeTag
             auto property_creator_param_set = _parse_creator_parameter_set(property_tag, property_detail_type);
             auto property_instance = TypeReflectionManager::instance().create(property_tag, property_detail_type);
             property_instance->initialize(_device, property_creator_param_set);
-            param_set.emplace(property_name, core_type_vector_variant_create(property_tag, property_instance));
+            param_set.emplace(property_name, non_value_core_type_vector_variant_create(property_tag, std::move(property_instance)));
         }
     }
     _match("}");
