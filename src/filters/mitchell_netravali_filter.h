@@ -24,15 +24,29 @@ struct alignas(16) MitchellNetravaliFilterApplyUniforms {
 
 namespace luisa {
 
-class MitchellNetravaliFilter : public Filter {
+DERIVED_CLASS(MitchellNetravaliFilter, Filter) {
 
 private:
     std::shared_ptr<Kernel> _apply_kernel;
-    float _b;
-    float _c;
+
+protected:
+    PROPERTY(float, b, CoreTypeTag::FLOAT) {
+        if (params.size() != 1) {
+            THROW_FILTER_ERROR("expected exactly one float value as Mitchell-Netravali filter parameter 'B'.");
+        }
+        _b = params[0];
+    }
+    
+    PROPERTY(float, c, CoreTypeTag::FLOAT) {
+        if (params.size() != 1) {
+            THROW_FILTER_ERROR("expected exactly one float value as Mitchell-Netravali filter parameter 'C'.");
+        }
+        _c = params[0];
+    }
 
 public:
-    void initialize(Device &device) override;
+    CREATOR("MitchellNetravali") noexcept { return std::make_shared<MitchellNetravaliFilter>(); }
+    void initialize(Device &device, const CoreTypeInitializerParameterSet &param_set) override;
     void apply(KernelDispatcher &dispatch, Buffer &gather_ray_buffer, Texture &result_texture, math::uint2 frame_size, uint32_t frame_index) override;
 };
 

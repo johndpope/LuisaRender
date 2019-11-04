@@ -20,7 +20,13 @@ void MitchellNetravaliFilter::apply(KernelDispatcher &dispatch, Buffer &gather_r
     });
 }
 
-void MitchellNetravaliFilter::initialize(Device &device) {
+void MitchellNetravaliFilter::initialize(Device &device, const CoreTypeInitializerParameterSet &param_set) {
+    
+    Filter::initialize(device, param_set);
+    
+    if (!_decode_b(param_set)) { LUISA_WARNING("parameter 'B' not specified, using default value (1/3)."); }
+    if (!_decode_c(param_set)) { LUISA_WARNING("parameter 'C' not specified, using default value (1/3)."); }
+    
     _apply_kernel = device.create_kernel("mitchell_natravali_filter_apply");
 }
 

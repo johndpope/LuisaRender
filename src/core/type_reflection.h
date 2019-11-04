@@ -15,19 +15,17 @@
 #include <iostream>
 
 #include <util/noncopyable.h>
+#include <util/exception.h>
 
 #include "device.h"
 #include "core_type.h"
 
 namespace luisa {
 
-struct TypeReflectionError : public std::runtime_error {
-    template<typename ...Args>
-    TypeReflectionError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{util::serialize("TypeReflectionError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
-};
+LUISA_MAKE_ERROR_TYPE(TypeReflectionError);
 
-#define THROW_TYPE_REFLECTION_ERROR(...)  throw TypeReflectionError{__FILE__, __LINE__, __VA_ARGS__}
+#define THROW_TYPE_REFLECTION_ERROR(...)  \
+    LUISA_THROW_ERROR(TypeReflectionError, __VA_ARGS__)
 
 class TypeReflectionManager : util::Noncopyable {
 
@@ -36,7 +34,8 @@ public:
         std::string_view class_name;
         int32_t parent_index;
         CoreTypeTag base_tag;
-        std::unordered_map<std::string_view, CoreTypeTag> properties{};
+        std::string_view detail_name;
+        std::unordered_map<std::string_view, CoreTypeTag> properties;
         
         Info(std::string_view cls, int32_t parent, CoreTypeTag tag) noexcept
             : class_name{cls}, parent_index{parent}, base_tag{tag} {}
@@ -82,10 +81,11 @@ public:
         auto base_tag_index = static_cast<uint32_t>(_info_list.back().base_tag);
         assert(base_tag_index < non_value_core_type_count && _creators[base_tag_index].count(detail_name) == 0);
         _creators[base_tag_index].emplace(detail_name, std::make_pair(_info_list.back().class_name, std::move(creator)));
+        _info_list.back().detail_name = detail_name;
     }
     
     [[nodiscard]] std::string_view derived_class_name(CoreTypeTag tag, std::string_view detail_name) {
-        auto base_tag_index = static_cast<uint32_t>(_info_list.back().base_tag);
+        auto base_tag_index = static_cast<uint32_t>(tag);
         assert(base_tag_index < non_value_core_type_count && _creators[base_tag_index].count(detail_name) != 0);
         return _creators[base_tag_index].at(detail_name).first;
     }
@@ -129,6 +129,9 @@ public:
             std::cout << item.first << " [id = " << item.second << "]\n";
             auto &&info = _info_list[item.second];
             std::cout << "  base_tag = " << name_of_core_type_tag(info.base_tag) << "\n";
+            if (!info.detail_name.empty()) {
+                std::cout << "  detail_name = " << info.detail_name << "\n";
+            }
             std::cout << "  parent_id = " << info.parent_index << "\n";
             if (info.parent_index != -1) {
                 std::cout << "  parent_name = " << _info_list[info.parent_index].class_name << "\n";
@@ -162,7 +165,7 @@ struct WrapBaseCoreTypeTag {
 
 }
 
-#define implements ,
+#define IMPLEMENTS ,
 
 #define DERIVED_CLASS(Cls, Parent)                                                                                                           \
     class Cls;                                                                                                                               \

@@ -30,14 +30,10 @@
 
 namespace luisa {
 
-struct ParserError : std::runtime_error {
-    template<typename ...Args>
-    ParserError(std::string_view file, size_t line, size_t curr_line, size_t curr_col, Args &&...args) noexcept
-        : std::runtime_error{
-        util::serialize("ParserError (line ", curr_line, ", col ", curr_col, "): ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
-};
+LUISA_MAKE_ERROR_TYPE(ParserError);
 
-#define THROW_PARSER_ERROR(...) throw ParserError{__FILE__, __LINE__, __VA_ARGS__}
+#define THROW_PARSER_ERROR(curr_line, curr_col, ...)  \
+    LUISA_THROW_ERROR(ParserError, "(", curr_line, ":", curr_col, ") ", __VA_ARGS__)
 
 namespace _impl {
 

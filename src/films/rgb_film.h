@@ -20,14 +20,15 @@ struct alignas(16) RGBFilmConvertColorspaceUniforms {
 
 namespace luisa {
 
-class RGBFilm : public Film {
+DERIVED_CLASS(RGBFilm, Film) {
 
 private:
     std::shared_ptr<Kernel> _convert_colorspace_kernel;
 
 public:
-    void initialize(Device &device) override;
-    void convert_colorspace(KernelDispatcher &dispatch) override;
+    CREATOR("RGB") noexcept { return std::make_shared<RGBFilm>(); }
+    void initialize(Device &device, const CoreTypeInitializerParameterSet &param_set) override;
+    void convert_colorspace(KernelDispatcher &dispatch, Texture &result_texture) override;
 };
 
 }

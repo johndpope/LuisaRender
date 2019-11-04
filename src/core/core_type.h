@@ -9,18 +9,16 @@
 #include <string_view>
 #include <exception>
 
+#include <util/exception.h>
 #include <util/noncopyable.h>
 #include <util/string_manipulation.h>
 
 namespace luisa {
 
-struct CoreTypeError : std::runtime_error {
-    template<typename ...Args>
-    CoreTypeError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{util::serialize("CoreTypeError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
-};
+LUISA_MAKE_ERROR_TYPE(CoreTypeError);
 
-#define THROW_CORE_TYPE_ERROR(...) throw CoreTypeError{__FILE__, __LINE__, __VA_ARGS__}
+#define THROW_CORE_TYPE_ERROR(...)  \
+    LUISA_THROW_ERROR(CoreTypeError, __VA_ARGS__)
 
 enum struct CoreTypeTag : uint32_t {
     
@@ -177,13 +175,13 @@ constexpr auto tag_of_non_value_core_type = _impl::TagOfNonValueCoreTypeImpl<T>:
 [[nodiscard]] constexpr std::string_view name_of_value_core_type_tag(CoreTypeTag tag) noexcept {
     switch (tag) {
         case CoreTypeTag::STRING:
-            return "String";
+            return InfoOfCoreTypeTag<CoreTypeTag::STRING>::name;
         case CoreTypeTag::BOOL:
-            return "Bool";
+            return InfoOfCoreTypeTag<CoreTypeTag::BOOL>::name;
         case CoreTypeTag::FLOAT:
-            return "Float";
+            return InfoOfCoreTypeTag<CoreTypeTag::FLOAT>::name;
         case CoreTypeTag::INTEGER:
-            return "Integer";
+            return InfoOfCoreTypeTag<CoreTypeTag::INTEGER>::name;
         default:
             return "Unknown";
     }

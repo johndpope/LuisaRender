@@ -4,6 +4,25 @@
 
 #pragma once
 
+#include <core/mathematics.h>
+
+namespace luisa {
+
+struct alignas(16) PinholeCameraGenerateRaysUniforms {
+    math::float3 position;
+    math::float3 front;
+    math::float3 left;
+    math::float3 up;
+    math::float2 sensor_size;
+    float near_plane;
+    float fov;
+    math::uint2 frame_size;
+};
+
+}
+
+#ifndef DEVICE_COMPATIBLE
+
 #include "core/camera.h"
 
 namespace luisa {
@@ -49,3 +68,5 @@ public:
 };
 
 }
+
+#endif

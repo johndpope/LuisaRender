@@ -11,6 +11,7 @@
 #include <utility>
 #include <iostream>
 
+#include <util/exception.h>
 #include <util/string_manipulation.h>
 
 #include "mathematics.h"
@@ -20,13 +21,10 @@
 
 namespace luisa {
 
-struct DeviceError : public std::runtime_error {
-    template<typename ...Args>
-    DeviceError(std::string_view file, size_t line, Args &&...args) noexcept
-        : std::runtime_error{util::serialize("DeviceError: ", std::forward<Args>(args)..., "  [file: \"", file, "\", line: ", line, "]")} {}
-};
+LUISA_MAKE_ERROR_TYPE(DeviceError);
 
-#define THROW_DEVICE_ERROR(...) throw DeviceError{__FILE__, __LINE__, __VA_ARGS__}
+#define THROW_DEVICE_ERROR(...)  \
+    LUISA_THROW_ERROR(DeviceError, __VA_ARGS__)
 
 class Device : util::Noncopyable {
 
