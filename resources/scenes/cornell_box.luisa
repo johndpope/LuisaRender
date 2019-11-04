@@ -8,9 +8,8 @@ Film film : RGB {
 Camera camera : Pinhole {
   fov { 42.5 }
   position { 0.0, 0.0, 15.0 }
-  look_at { 0.0, 0.0, 14.0 }
+  target { 0.0, 0.0, 14.0 }
   up { 0.0, 1.0, 0.0 }
-  film { @film }
 }
 
 Light light : Point {
@@ -94,6 +93,7 @@ Integrator integrator : PathTracing {
 }
 
 Task render : SingleShot {
+  film { @film }
   camera { @camera }
   integrator { @integrator }
   geometry { @cornell_box }

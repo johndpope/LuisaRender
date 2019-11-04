@@ -1,5 +1,5 @@
 //
-// Created by Mike Smith on 2019/10/18.
+// Created by Mike Smith on 2019/10/23.
 //
 
 #pragma once
@@ -23,48 +23,29 @@ struct alignas(16) PinholeCameraGenerateRaysUniforms {
 
 #ifndef DEVICE_COMPATIBLE
 
-#include "core/camera.h"
+#include <type_traits>
+#include <core/camera.h>
 
 namespace luisa {
 
 DERIVED_CLASS(PinholeCamera, Camera) {
 
+private:
+    std::shared_ptr<Kernel> _generate_rays_kernel;
+
 protected:
-    
     PROPERTY(float, fov, CoreTypeTag::FLOAT) {
+        if (params.size() != 1) {
+            THROW_CAMERA_ERROR("expected exactly one float value for pinhole camera fov.");
+        }
         _fov = params[0];
     }
-    
-    PROPERTY(float, lens_radius, CoreTypeTag::FLOAT) {
-        _lens_radius = params[0];
-    }
-    
-    PROPERTY(float, focal_distance, CoreTypeTag::FLOAT) {
-        _focal_distance = params[0];
-    }
-    
+
 public:
-    
-    size_t random_number_dimensions() const noexcept override {
-        return 2;
-    }
-    
-    void initialize(Device &device) override {
-    
-    }
-    
-    void generate_rays(KernelDispatcher &dispatch, Texture &random_texture, Buffer &ray_buffer, math::uint2 frame_size, float time) override {
-    
-    }
-    
-    void initialize(Device &device, const CoreTypeInitializerParameterSet &param_set) override {
-    
-    }
-    
-    CREATOR("Pinhole") {
-        return std::make_shared<PinholeCamera>();
-    }
-    
+    CREATOR("Pinhole") noexcept { return std::make_shared<PinholeCamera>(); }
+    [[nodiscard]] size_t random_number_dimensions() const noexcept override { return 2ul; }
+    void generate_rays(KernelDispatcher &dispatch, Texture &random_texture, Buffer &ray_buffer, math::uint2 frame_size, float time) override;
+    void initialize(Device &device, const CoreTypeInitializerParameterSet &param_set) override;
 };
 
 }

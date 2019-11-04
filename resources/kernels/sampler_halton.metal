@@ -53,7 +53,7 @@ using namespace math;
 using namespace metal;
 
 kernel void halton_sampler_prepare_for_frame(
-    constant HaltonSamplerPrepareUniforms &uniforms [[buffer(0)]],
+    constant HaltonSamplerPrepareForFrameUniforms &uniforms [[buffer(0)]],
     device HaltonSamplerState *states [[buffer(1)]],
     uint2 tid [[thread_position_in_grid]]) {
     
@@ -66,7 +66,7 @@ kernel void halton_sampler_prepare_for_frame(
 }
 
 kernel void halton_sampler_generate_samples(
-    constant HaltonSamplerGenerateUniforms &uniforms [[buffer(0)]],
+    constant HaltonSamplerGenerateSamplesUniforms &uniforms [[buffer(0)]],
     device HaltonSamplerState *states [[buffer(1)]],
     texture2d<float, access::write> random [[texture(0)]],
     uint2 tid [[thread_position_in_grid]]) {

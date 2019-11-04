@@ -12,10 +12,10 @@ namespace luisa {
 CORE_CLASS(Sampler) {
 
 protected:
-    std::shared_ptr<Texture> _random_texture;
+    uint32_t _current_dimension;
 
 public:
-    virtual void initialize(Device &device) = 0;
+    void initialize(Device &device [[maybe_unused]], const CoreTypeInitializerParameterSet &param_set [[maybe_unused]]) override { _current_dimension = 0u; }
     virtual void prepare_for_frame(KernelDispatcher &dispatch, math::uint2 frame_size, uint frame_index, uint total_dimensions) = 0;
     virtual void generate_samples(KernelDispatcher &dispatch, Texture &random_texture, uint dimensions) = 0;
 };
